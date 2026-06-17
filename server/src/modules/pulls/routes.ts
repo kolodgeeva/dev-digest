@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { PrMeta, PrDetail, GitHubClient, PrReviewComment } from '@devdigest/shared';
 import { PrCommentInput } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
@@ -117,6 +117,11 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
     // not surfaced on the list — findings live on the PR detail page.)
     const prIds = rows.map((r) => r.id);
     const latestReviewByPr = new Map<string, { score: number | null }>();
+    // Total cost per PR = SUM of every agent run's cost, across all agents and
+    // all time (not just the latest review). Computed on read by grouping
+    // agent_runs by pr_id. SUM ignores null costs (failed/unpriced runs) and is
+    // null when a PR has no priced runs at all → the list renders "—".
+    const costByPr = new Map<string, number | null>();
     if (prIds.length > 0) {
       const reviewRows = await container.db
         .select({ prId: t.reviews.prId, score: t.reviews.score })
@@ -126,6 +131,15 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       // Rows are newest-first → first seen per PR is the latest review.
       for (const rv of reviewRows) {
         if (!latestReviewByPr.has(rv.prId)) latestReviewByPr.set(rv.prId, { score: rv.score });
+      }
+
+      const costRows = await container.db
+        .select({ prId: t.agentRuns.prId, cost: sql<number | null>`sum(${t.agentRuns.costUsd})` })
+        .from(t.agentRuns)
+        .where(inArray(t.agentRuns.prId, prIds))
+        .groupBy(t.agentRuns.prId);
+      for (const cr of costRows) {
+        if (cr.prId) costByPr.set(cr.prId, cr.cost);
       }
     }
 
@@ -153,6 +167,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         opened_at: r.openedAt?.toISOString() ?? null,
         updated_at: r.updatedAt?.toISOString() ?? null,
         score: review ? review.score : null,
+        cost_usd: costByPr.get(r.id) ?? null,
       };
     });
   });
