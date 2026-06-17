@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sid=$(jq -r '.session_id // \"nosession\"'); f=\"/tmp/claude-insights-$sid\"; [ -f \"$f\" ] && exit 0; touch \"$f\"; printf '%s' '{\"decision\":\"block\",\"reason\":\"Before ending this session: if it was substantive (>30 min with a real problem, decision, or discovery), run /engineering-insights to append what you learned to the matching INSIGHTS.md (append-only, per-package). If it was trivial (a quick question or tiny edit), just stop normally without running it. Do not run it more than once per session.\"}'",
+            "statusMessage": "Checking session insights..."
+          }
+        ]
+      }
+    ]
+  }
+}
