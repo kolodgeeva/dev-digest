@@ -10,6 +10,9 @@ import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
 import { formatCost } from "@/lib/format-cost";
+import { HoverCard } from "@/components/hover-card";
+import { FindingsSummary } from "@/components/findings-summary";
+import { PrFindingsHover } from "./PrFindingsHover";
 
 export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
   const t = useTranslations("prReview");
@@ -50,6 +53,15 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
       <div style={s.scoreCell}>
         {reviewed ? (
           <CircularScore score={pr.score!} size={34} stroke={3} />
+        ) : (
+          <span style={s.muted}>—</span>
+        )}
+      </div>
+      <div onClick={(e) => e.stopPropagation()} style={{ cursor: "default" }}>
+        {pr.id && pr.findings_summary ? (
+          <HoverCard trigger={<FindingsSummary counts={pr.findings_summary} />}>
+            <PrFindingsHover prId={pr.id} />
+          </HoverCard>
         ) : (
           <span style={s.muted}>—</span>
         )}

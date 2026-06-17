@@ -1,4 +1,10 @@
 {
+  "findingsPopover": {
+    "title": "{count} findings",
+    "inThisRun": "{count} findings in this run",
+    "empty": "No findings",
+    "loading": "Loading findings…"
+  },
   "finding": {
     "accepted": "accepted",
     "dismissed": "dismissed",
@@ -91,6 +97,7 @@
       "author": "Author",
       "size": "Size",
       "score": "Score",
+      "findings": "Findings",
       "status": "Status",
       "cost": "Cost",
       "updated": "Updated"
