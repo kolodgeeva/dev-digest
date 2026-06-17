@@ -22,6 +22,7 @@ is a draft under human spot-check — committed to git.
 
 ## Codebase Patterns
 <!-- conventions, architectural decisions -->
+- 2026-06-17 · codebase-pattern · Zod contracts in `*/vendor/shared/` have NO sync script — `server/src/vendor/shared/` and `client/src/vendor/shared/` are independent copies you must edit identically. Adding/removing one field = two edits (both `trace.ts`, both `platform.ts`, …). Precedent: commit d45ab0d edited both `trace.ts` copies in one go. Forgetting one side compiles in that package but fails the other's typecheck/`.parse`.
 
 ## Tool & Library Notes
 <!-- dependency quirks/gotchas -->
