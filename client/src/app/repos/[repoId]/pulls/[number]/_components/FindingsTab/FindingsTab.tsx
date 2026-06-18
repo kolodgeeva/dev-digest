@@ -63,6 +63,17 @@ export function FindingsTab({
     [onDelete],
   );
 
+  // Per-run findings for the timeline's severity badges + hover popover. Keyed
+  // by run_id (ReviewRecord.run_id ↔ RunSummary.run_id); runs without a run_id
+  // (legacy rows) are simply absent → the timeline falls back to its text count.
+  const findingsByRun = React.useMemo(() => {
+    const m = new Map<string, FindingRecord[]>();
+    for (const r of runs) {
+      if (r.run_id) m.set(r.run_id, r.findings);
+    }
+    return m;
+  }, [runs]);
+
   // Timeline → Review-runs navigation: clicking an agent name in the timeline
   // opens + scrolls to that run's accordion below. The nonce re-triggers the
   // scroll even when the same run is clicked twice.
@@ -131,6 +142,7 @@ export function FindingsTab({
           <RunHistory
             runs={prRuns ?? []}
             commits={prCommits}
+            findingsByRun={findingsByRun}
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
             onDelete={handleDelete}

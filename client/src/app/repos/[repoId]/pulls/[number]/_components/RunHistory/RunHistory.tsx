@@ -3,8 +3,49 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import type { RunSummary, PrCommit } from "@devdigest/shared";
+import type { RunSummary, PrCommit, FindingRecord } from "@devdigest/shared";
 import { formatCost } from "@/lib/format-cost";
+import { HoverCard } from "@/components/hover-card";
+import { FindingsSummary, type SeverityCounts } from "@/components/findings-summary";
+import { FindingsPopover } from "@/components/findings-popover";
+
+/** Tally a run's findings into the per-severity shape FindingsSummary expects. */
+function countSeverities(findings: FindingRecord[]): SeverityCounts {
+  const c: SeverityCounts = { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 };
+  for (const f of findings) {
+    if (f.severity === "CRITICAL" || f.severity === "WARNING" || f.severity === "SUGGESTION")
+      c[f.severity] += 1;
+  }
+  return c;
+}
+
+/**
+ * One run's hoverable severity badges + findings popover. Clicking a badge
+ * filters the popover to that severity (toggle off on re-click); the filter
+ * resets when the popover closes. Each run owns its own `activeSeverity` state,
+ * so this must be its own component (can't useState inside the timeline map).
+ */
+function RunFindings({ findings }: { findings: FindingRecord[] }) {
+  const [activeSeverity, setActiveSeverity] = React.useState<keyof SeverityCounts | null>(null);
+  const counts = countSeverities(findings);
+  const shown = activeSeverity ? findings.filter((f) => f.severity === activeSeverity) : findings;
+  return (
+    <div onClick={(e) => e.stopPropagation()} style={{ cursor: "default" }}>
+      <HoverCard
+        onClose={() => setActiveSeverity(null)}
+        trigger={
+          <FindingsSummary
+            counts={counts}
+            activeSeverity={activeSeverity}
+            onSelect={(sev) => setActiveSeverity((cur) => (cur === sev ? null : sev))}
+          />
+        }
+      >
+        <FindingsPopover findings={shown} inThisRun />
+      </HoverCard>
+    </div>
+  );
+}
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -88,12 +129,15 @@ function tsOf(s: string | null | undefined): number {
 export function RunHistory({
   runs,
   commits = [],
+  findingsByRun,
   onOpenTrace,
   onGoToReview,
   onDelete,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
+  /** Per-run findings (keyed by run_id) → timeline severity badges + popover. */
+  findingsByRun?: Map<string, FindingRecord[]>;
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
   /** Jump to this run's inline review accordion below (clicking the agent name). */
@@ -189,12 +233,27 @@ export function RunHistory({
                   {r.error}
                 </div>
               )}
-              {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
-                  {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
-                </div>
-              )}
+              {settled &&
+                (() => {
+                  const runFindings = findingsByRun?.get(r.run_id);
+                  const counts = runFindings ? countSeverities(runFindings) : null;
+                  // When we have this run's findings AND at least one severity to
+                  // show, render the hoverable severity badges; otherwise keep the
+                  // plain text summary (legacy rows / runs with no findings).
+                  if (
+                    runFindings &&
+                    counts &&
+                    counts.CRITICAL + counts.WARNING + counts.SUGGESTION > 0
+                  ) {
+                    return <RunFindings findings={runFindings} />;
+                  }
+                  return (
+                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                      {t("runStatus.findings", { count: r.findings_count ?? 0 })}
+                      {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
+                    </div>
+                  );
+                })()}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
               {r.ran_at && <span>{new Date(r.ran_at).toLocaleTimeString()}</span>}
