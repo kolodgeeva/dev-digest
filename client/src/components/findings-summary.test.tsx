@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { FindingsSummary } from "./findings-summary";
 
 afterEach(cleanup);
@@ -26,5 +26,40 @@ describe("FindingsSummary", () => {
       <FindingsSummary counts={{ CRITICAL: 0, WARNING: 0, SUGGESTION: 0 }} />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders no buttons when onSelect is omitted (timeline path unchanged)", () => {
+    const { container } = render(
+      <FindingsSummary counts={{ CRITICAL: 1, WARNING: 1, SUGGESTION: 0 }} />,
+    );
+    expect(container.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  it("calls onSelect with the clicked severity when interactive", () => {
+    const onSelect = vi.fn();
+    render(
+      <FindingsSummary
+        counts={{ CRITICAL: 2, WARNING: 1, SUGGESTION: 0 }}
+        onSelect={onSelect}
+      />,
+    );
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(2); // SUGGESTION (0) is skipped
+    fireEvent.click(buttons[0]!);
+    expect(onSelect).toHaveBeenCalledWith("CRITICAL");
+  });
+
+  it("dims non-active badges and marks the active one pressed", () => {
+    render(
+      <FindingsSummary
+        counts={{ CRITICAL: 2, WARNING: 1, SUGGESTION: 0 }}
+        onSelect={() => {}}
+        activeSeverity="CRITICAL"
+      />,
+    );
+    const [crit, warn] = screen.getAllByRole("button");
+    expect(crit!.getAttribute("aria-pressed")).toBe("true");
+    expect(crit!.style.opacity).toBe("1");
+    expect(warn!.style.opacity).toBe("0.4");
   });
 });

@@ -18,18 +18,25 @@ const CLOSE_DELAY_MS = 120;
 const GAP = 6;
 const MARGIN = 8;
 
-type Pos = { top: number; left: number };
+// Either top-anchored (placed below the trigger) or bottom-anchored (flipped
+// above it). Bottom-anchoring keeps the popover glued just above the trigger
+// even as its content height changes (e.g. click-to-filter shrinks the list),
+// instead of floating up and leaving a gap.
+type Pos = { left: number; top: number | null; bottom: number | null };
 
 export function HoverCard({
   trigger,
   children,
   align = "left",
   width = 340,
+  onClose,
 }: {
   trigger: React.ReactNode;
   children: React.ReactNode;
   align?: "left" | "right";
   width?: number;
+  /** Fired when the popover transitions from open → closed. */
+  onClose?: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [pos, setPos] = React.useState<Pos | null>(null);
@@ -46,6 +53,13 @@ export function HoverCard({
   };
   React.useEffect(() => clearTimers, []);
 
+  // Notify on close (open → closed) so callers can reset transient popover state.
+  const wasOpen = React.useRef(false);
+  React.useEffect(() => {
+    if (wasOpen.current && !open) onClose?.();
+    wasOpen.current = open;
+  }, [open, onClose]);
+
   const computePos = (): Pos | null => {
     const el = triggerRef.current;
     if (!el) return null;
@@ -53,7 +67,7 @@ export function HoverCard({
     const maxLeft = window.innerWidth - width - MARGIN;
     const rawLeft = align === "right" ? r.right - width : r.left;
     const left = Math.max(MARGIN, Math.min(rawLeft, maxLeft));
-    return { top: r.bottom + GAP, left };
+    return { left, top: r.bottom + GAP, bottom: null };
   };
 
   const onEnter = () => {
@@ -99,13 +113,20 @@ export function HoverCard({
   }, [open]);
 
   // Flip above the trigger when the popover would overflow the viewport bottom.
+  // When flipped, anchor by `bottom` (just above the trigger) rather than `top`
+  // so a content-height change keeps it glued to the trigger instead of leaving
+  // a gap. Idempotent: only flips/unflips when the placement actually differs.
   React.useLayoutEffect(() => {
     if (!open || !pos || !popRef.current || !triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
     const h = popRef.current.offsetHeight;
-    if (pos.top + h > window.innerHeight - MARGIN) {
-      const r = triggerRef.current.getBoundingClientRect();
-      const flipped = r.top - GAP - h;
-      if (flipped >= MARGIN && flipped !== pos.top) setPos({ top: flipped, left: pos.left });
+    const overflowsBelow = r.bottom + GAP + h > window.innerHeight - MARGIN;
+    const roomAbove = r.top - GAP - h >= MARGIN;
+    const shouldFlip = overflowsBelow && roomAbove;
+    if (shouldFlip && pos.bottom == null) {
+      setPos({ left: pos.left, top: null, bottom: window.innerHeight - (r.top - GAP) });
+    } else if (!shouldFlip && pos.bottom != null) {
+      setPos({ left: pos.left, top: r.bottom + GAP, bottom: null });
     }
   }, [open, pos]);
 
@@ -128,7 +149,8 @@ export function HoverCard({
             onMouseLeave={onLeave}
             style={{
               position: "fixed",
-              top: pos.top,
+              top: pos.top ?? undefined,
+              bottom: pos.bottom ?? undefined,
               left: pos.left,
               width,
               background: "var(--bg-elevated)",

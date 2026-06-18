@@ -11,13 +11,14 @@ import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
 import { formatCost } from "@/lib/format-cost";
 import { HoverCard } from "@/components/hover-card";
-import { FindingsSummary } from "@/components/findings-summary";
+import { FindingsSummary, type SeverityCounts } from "@/components/findings-summary";
 import { PrFindingsHover } from "./PrFindingsHover";
 
 export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
   const t = useTranslations("prReview");
   const router = useRouter();
   const [h, setH] = React.useState(false);
+  const [activeSeverity, setActiveSeverity] = React.useState<keyof SeverityCounts | null>(null);
   const st = STATUS_META[pr.status] ?? STATUS_META.needs_review!;
   const { size, lines } = sizeOf(pr);
   const reviewed = pr.score != null; // null score ⇒ PR has never been reviewed
@@ -59,8 +60,17 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
       </div>
       <div onClick={(e) => e.stopPropagation()} style={{ cursor: "default" }}>
         {pr.id && pr.findings_summary ? (
-          <HoverCard trigger={<FindingsSummary counts={pr.findings_summary} />}>
-            <PrFindingsHover prId={pr.id} />
+          <HoverCard
+            onClose={() => setActiveSeverity(null)}
+            trigger={
+              <FindingsSummary
+                counts={pr.findings_summary}
+                activeSeverity={activeSeverity}
+                onSelect={(sev) => setActiveSeverity((cur) => (cur === sev ? null : sev))}
+              />
+            }
+          >
+            <PrFindingsHover prId={pr.id} activeSeverity={activeSeverity} />
           </HoverCard>
         ) : (
           <span style={s.muted}>—</span>

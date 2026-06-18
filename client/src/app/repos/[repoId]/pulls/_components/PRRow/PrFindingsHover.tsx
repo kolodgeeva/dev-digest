@@ -8,8 +8,16 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { usePrReviews } from "@/lib/hooks/reviews";
 import { FindingsPopover } from "@/components/findings-popover";
+import type { SeverityCounts } from "@/components/findings-summary";
 
-export function PrFindingsHover({ prId }: { prId: string }) {
+export function PrFindingsHover({
+  prId,
+  activeSeverity,
+}: {
+  prId: string;
+  /** When set, show only this severity's findings (clicked badge filter). */
+  activeSeverity?: keyof SeverityCounts | null;
+}) {
   const t = useTranslations("prReview");
   const { data, isLoading } = usePrReviews(prId);
 
@@ -22,7 +30,8 @@ export function PrFindingsHover({ prId }: { prId: string }) {
   }
   // Reviews come back newest-first → [0] is the latest review (matches badges).
   const findings = data?.[0]?.findings ?? [];
-  return <FindingsPopover findings={findings} />;
+  const shown = activeSeverity ? findings.filter((f) => f.severity === activeSeverity) : findings;
+  return <FindingsPopover findings={shown} />;
 }
 
 export default PrFindingsHover;

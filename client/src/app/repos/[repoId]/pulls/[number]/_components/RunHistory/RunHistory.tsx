@@ -20,6 +20,34 @@ function countSeverities(findings: FindingRecord[]): SeverityCounts {
 }
 
 /**
+ * One run's hoverable severity badges + findings popover. Clicking a badge
+ * filters the popover to that severity (toggle off on re-click); the filter
+ * resets when the popover closes. Each run owns its own `activeSeverity` state,
+ * so this must be its own component (can't useState inside the timeline map).
+ */
+function RunFindings({ findings }: { findings: FindingRecord[] }) {
+  const [activeSeverity, setActiveSeverity] = React.useState<keyof SeverityCounts | null>(null);
+  const counts = countSeverities(findings);
+  const shown = activeSeverity ? findings.filter((f) => f.severity === activeSeverity) : findings;
+  return (
+    <div onClick={(e) => e.stopPropagation()} style={{ cursor: "default" }}>
+      <HoverCard
+        onClose={() => setActiveSeverity(null)}
+        trigger={
+          <FindingsSummary
+            counts={counts}
+            activeSeverity={activeSeverity}
+            onSelect={(sev) => setActiveSeverity((cur) => (cur === sev ? null : sev))}
+          />
+        }
+      >
+        <FindingsPopover findings={shown} inThisRun />
+      </HoverCard>
+    </div>
+  );
+}
+
+/**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
  * and DB-backed so it survives reload. Showing commits between runs makes it
  * clear which commit each review ran against. Failed runs show their error
@@ -217,13 +245,7 @@ export function RunHistory({
                     counts &&
                     counts.CRITICAL + counts.WARNING + counts.SUGGESTION > 0
                   ) {
-                    return (
-                      <div onClick={(e) => e.stopPropagation()} style={{ cursor: "default" }}>
-                        <HoverCard trigger={<FindingsSummary counts={counts} />}>
-                          <FindingsPopover findings={runFindings} inThisRun />
-                        </HoverCard>
-                      </div>
-                    );
+                    return <RunFindings findings={runFindings} />;
                   }
                   return (
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
