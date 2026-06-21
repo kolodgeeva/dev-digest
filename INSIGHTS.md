@@ -19,6 +19,7 @@ is a draft under human spot-check — committed to git.
 
 ## What Doesn't Work
 <!-- dead ends & antipatterns — the most-skipped, most-valuable section; fill it -->
+- 2026-06-21 · antipattern · Can't smoke-test a `PreToolUse` Bash hook whose matcher keys on a substring (e.g. `git commit`) by piping a fake event through the Bash tool — your *own* test invocation's command string contains that substring, so the live hook denies your Bash call before it runs. Put the test logic + the trigger string in a script file and run `bash /tmp/x.sh` (the outer command the hook sees is just `bash /tmp/x.sh`, which doesn't match). Evidence: `.claude/settings.json` PreToolUse hook added this session.
 
 ## Codebase Patterns
 <!-- conventions, architectural decisions -->
@@ -27,6 +28,8 @@ is a draft under human spot-check — committed to git.
 
 ## Tool & Library Notes
 <!-- dependency quirks/gotchas -->
+- 2026-06-21 · tooling · Root `CLAUDE.md` is a symlink to `AGENTS.md` (`readlink -f CLAUDE.md` → `AGENTS.md`). The Edit/Write tools refuse to write through a symlink — edit `AGENTS.md` directly. (Per-package `server/CLAUDE.md` etc. are real files.)
+- 2026-06-21 · tooling · New `pr-self-review` skill + commit gate added this session. `git commit` is blocked by a `PreToolUse` hook in `.claude/settings.json` until a pass flag `/tmp/claude-pr-selfreview-<diffhash>` exists; the skill (`/pr-self-review`) writes that flag only when 0 CRITICAL findings. Flag is keyed to a hash of `git diff $(git merge-base main HEAD)` — NOT session id — because the hook reads `.session_id` from stdin JSON while the skill's Bash env has no reliable matching session var; diff-hash keying also forces re-review whenever code changes. The skill routes changed files to existing skills by path (UI→frontend-architecture/next/react, server→onion/fastify/drizzle/pg, all→typescript-expert/zod/security). To bypass during an authorized commit, create the flag for the current diff hash.
 
 ## Recurring Errors & Fixes
 <!-- repeated error + its fix -->

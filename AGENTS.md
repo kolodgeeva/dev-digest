@@ -42,6 +42,10 @@ server only: `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:generate`
 ## Project-wide conventions
 - **Never `git commit` (or push) without the user's explicit approval.** Make the
   edits, run the checks, show what changed — then wait. Only commit when asked.
+- **PR self-review gate.** Before committing, `git commit` is blocked by a `PreToolUse`
+  hook until `pr-self-review` passes for the current diff; run `/pr-self-review` (or it
+  runs on demand) — any `CRITICAL` finding blocks the commit. See
+  `.claude/skills/pr-self-review/SKILL.md`.
 - **Not a monorepo workspace.** Each package has its own `package.json` + lockfile;
   cross-package code is shared via tsconfig path aliases, not published modules.
 - **Tests split by filename**: `*.it.test.ts` = DB-backed (testcontainers Postgres);
