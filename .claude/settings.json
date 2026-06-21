@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); cmd=$(printf '%s' \"$input\" | jq -r '.tool_input.command // \"\"'); case \"$cmd\" in *\"git commit\"*) h=$(git diff \"$(git merge-base main HEAD)\" | shasum | cut -d' ' -f1); if [ -f \"/tmp/claude-pr-selfreview-$h\" ]; then exit 0; else printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Run /pr-self-review on the current diff before committing. Commit is blocked until a self-review passes (no CRITICAL findings) for these exact changes.\"}}'; fi ;; *) exit 0 ;; esac",
+            "command": "input=$(cat); cmd=$(printf '%s' \"$input\" | jq -r '.tool_input.command // \"\"'); case \"$cmd\" in *\"git commit\"*) tmp=$(mktemp); GIT_INDEX_FILE=\"$tmp\" git read-tree HEAD 2>/dev/null; GIT_INDEX_FILE=\"$tmp\" git add -A 2>/dev/null; h=$(GIT_INDEX_FILE=\"$tmp\" git diff --cached HEAD | shasum | cut -d' ' -f1); rm -f \"$tmp\"; if [ -f \"/tmp/claude-pr-selfreview-$h\" ]; then exit 0; else printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Run /pr-self-review on the current local changes before committing. Commit is blocked until a self-review passes (no CRITICAL findings) for these exact changes.\"}}'; fi ;; *) exit 0 ;; esac",
             "statusMessage": "Checking PR self-review gate..."
           }
         ]

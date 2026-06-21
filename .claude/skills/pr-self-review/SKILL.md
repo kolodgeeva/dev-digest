@@ -1,6 +1,6 @@
 ---
 name: pr-self-review
-description: "Review all open local changes before they are committed/merged. Reads the branch-vs-main + uncommitted diff, routes each changed file through the matching DevDigest skills (UI skills on client files, backend skills on server files, cross-cutting skills on all), and BLOCKS if any CRITICAL finding exists. Runs automatically before git commit (via PreToolUse hook) and on demand. Trigger phrases: \"self review\", \"check my changes\", \"review before merge\", \"pr self review\"."
+description: "Review local changes before they are committed/merged. Reads everything changed locally against the current branch tip (HEAD) — staged, unstaged, and untracked — routes each changed file through the matching DevDigest skills (UI skills on client files, backend skills on server files, cross-cutting skills on all), and BLOCKS if any CRITICAL finding exists. Runs automatically before git commit (via PreToolUse hook) and on demand. Trigger phrases: \"self review\", \"check my changes\", \"review before merge\", \"pr self review\"."
 allowed-tools: Bash, Read, Grep, Glob, Skill
 metadata:
   version: 1.0.0
@@ -22,16 +22,22 @@ the commit until a passing review exists for the exact current diff), or manuall
 
 ## Procedure
 
-### Step 1 — Compute the diff (all open changes)
+### Step 1 — Compute the diff (local changes vs the current branch)
+
+Review only what's changed **locally against the current branch tip (`HEAD`)** — staged,
+unstaged, **and untracked** files. Already-committed work is not re-reviewed.
+
+Build the diff through a throwaway index so the result is identical whether or not files are
+staged, and so untracked files are included. This never touches your real index:
 
 ```sh
-base=$(git merge-base main HEAD)
-git diff --name-only "$base"     # changed files: committed-on-branch + staged + working-tree
-git diff "$base"                 # full unified diff to review
+tmp=$(mktemp)
+GIT_INDEX_FILE="$tmp" git read-tree HEAD                    # start from the current branch tip
+GIT_INDEX_FILE="$tmp" git add -A                            # snapshot the working tree (incl. untracked)
+GIT_INDEX_FILE="$tmp" git diff --cached --name-only HEAD    # changed file list
+GIT_INDEX_FILE="$tmp" git diff --cached HEAD                # full unified diff to review
+rm -f "$tmp"
 ```
-
-`git diff <merge-base>` (note: **no** `..HEAD`) compares the merge-base against the working
-tree, so it captures committed-on-branch **and** uncommitted/staged edits in one pass.
 
 If there are zero changed files, report "nothing to review" and PASS (write the flag, Step 5).
 
@@ -82,13 +88,18 @@ Severity guidance:
 
 ### Step 5 — Write the pass flag (lets the commit hook through)
 
-Only on PASS. Key the flag to a hash of the reviewed diff so any later code change invalidates
-it and forces a re-review:
+Only on PASS. Key the flag to a hash of the reviewed diff — computed the **same** throwaway-index
+way as Step 1, so it's stable across staging and includes untracked files. Any later change to the
+working tree invalidates it and forces a re-review:
 
 ```sh
-h=$(git diff "$(git merge-base main HEAD)" | shasum | cut -d' ' -f1)
+tmp=$(mktemp)
+GIT_INDEX_FILE="$tmp" git read-tree HEAD
+GIT_INDEX_FILE="$tmp" git add -A
+h=$(GIT_INDEX_FILE="$tmp" git diff --cached HEAD | shasum | cut -d' ' -f1)
+rm -f "$tmp"
 touch "/tmp/claude-pr-selfreview-$h"
 ```
 
-The `PreToolUse` hook recomputes this same hash before each `git commit`; if the matching flag
+The `PreToolUse` hook computes this exact hash before each `git commit`; if the matching flag
 exists the commit proceeds, otherwise it is denied with an instruction to run this skill.
