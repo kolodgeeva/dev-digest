@@ -3,39 +3,30 @@
    screen_agents.jsx. */
 "use client";
 
-import React from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button, Dropdown, ErrorState, Skeleton, Icon, Badge } from "@devdigest/ui";
 import { AppShell } from "../../../components/app-shell";
 import { AgentCard } from "../_components/AgentCard";
 import { AgentEditor } from "./_components/AgentEditor";
-import { useAgents, useAgent, useUpdateAgent } from "../../../lib/hooks/agents";
 import { ApiError } from "../../../lib/api";
-
-const VALID_TABS = ["config"];
+import { useAgentEditorPage } from "./_lib/useAgentEditorPage";
 
 export default function AgentEditorPage() {
-  const params = useParams<{ id: string }>();
-  const search = useSearchParams();
-  const router = useRouter();
-  const { id } = params;
-
-  const { data: agents } = useAgents();
-  const { data: agent, isLoading, isError, error, refetch } = useAgent(id);
-  const update = useUpdateAgent();
-
-  const tab = VALID_TABS.includes(search.get("tab") ?? "") ? search.get("tab")! : "config";
-  const setTab = (t: string) => {
-    const sp = new URLSearchParams(search.toString());
-    sp.set("tab", t);
-    router.replace(`/agents/${id}?${sp.toString()}`);
-  };
-
-  const crumb = [
-    { label: "Skills Lab" },
-    { label: "Agents", href: "/agents" },
-    { label: agent?.name ?? "Agent" },
-  ];
+  const {
+    id,
+    agents,
+    agent,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    update,
+    tab,
+    setTab,
+    crumb,
+    onSelectAgent,
+    onCreate,
+    onRunOnPr,
+  } = useAgentEditorPage();
 
   if (isError || (!isLoading && !agent)) {
     return (
@@ -75,7 +66,7 @@ export default function AgentEditorPage() {
                     Add
                   </Button>
                 }
-                items={[{ label: "Create from scratch", icon: "Edit", onClick: () => router.push("/agents") }]}
+                items={[{ label: "Create from scratch", icon: "Edit", onClick: onCreate }]}
               />
             </div>
           </div>
@@ -85,7 +76,7 @@ export default function AgentEditorPage() {
                 key={a.id}
                 ag={a}
                 active={a.id === id}
-                onClick={() => router.push(`/agents/${a.id}?tab=${tab}`)}
+                onClick={() => onSelectAgent(a.id)}
                 onToggle={(enabled) => update.mutate({ id: a.id, patch: { enabled } })}
               />
             ))}
@@ -108,7 +99,7 @@ export default function AgentEditorPage() {
               </Badge>
               {!agent.enabled && <Badge color="var(--text-muted)">disabled</Badge>}
               <div style={{ marginLeft: "auto" }}>
-                <Button kind="secondary" size="sm" icon="GitPullRequest" onClick={() => router.push("/")}>
+                <Button kind="secondary" size="sm" icon="GitPullRequest" onClick={onRunOnPr}>
                   Run on a PR…
                 </Button>
               </div>
