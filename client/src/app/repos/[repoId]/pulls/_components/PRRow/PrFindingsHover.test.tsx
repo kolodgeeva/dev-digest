@@ -22,7 +22,7 @@ vi.mock("@/lib/hooks/reviews", () => ({
 }));
 
 // Render only what FindingsPopover received (titles) so we assert the filter.
-vi.mock("@/components/findings-popover", () => ({
+vi.mock("@/components/FindingsPopover", () => ({
   FindingsPopover: ({ findings }: { findings: { id: string; title: string }[] }) => (
     <ul>
       {findings.map((f) => (

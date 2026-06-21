@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { FindingsSummary } from "./findings-summary";
+import { FindingsSummary } from "./FindingsSummary";
 
 afterEach(cleanup);
 

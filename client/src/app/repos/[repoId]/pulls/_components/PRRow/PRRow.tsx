@@ -10,8 +10,8 @@ import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
 import { formatCost } from "@/lib/format-cost";
-import { HoverCard } from "@/components/hover-card";
-import { FindingsSummary, type SeverityCounts } from "@/components/findings-summary";
+import { HoverCard } from "@/components/HoverCard";
+import { FindingsSummary, type SeverityCounts } from "@/components/FindingsSummary";
 import { PrFindingsHover } from "./PrFindingsHover";
 
 export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {

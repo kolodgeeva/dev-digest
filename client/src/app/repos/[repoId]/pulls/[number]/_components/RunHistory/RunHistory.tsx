@@ -5,9 +5,9 @@ import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
 import type { RunSummary, PrCommit, FindingRecord } from "@devdigest/shared";
 import { formatCost } from "@/lib/format-cost";
-import { HoverCard } from "@/components/hover-card";
-import { FindingsSummary, type SeverityCounts } from "@/components/findings-summary";
-import { FindingsPopover } from "@/components/findings-popover";
+import { HoverCard } from "@/components/HoverCard";
+import { FindingsSummary, type SeverityCounts } from "@/components/FindingsSummary";
+import { FindingsPopover } from "@/components/FindingsPopover";
 
 /** Tally a run's findings into the per-severity shape FindingsSummary expects. */
 function countSeverities(findings: FindingRecord[]): SeverityCounts {

@@ -7,8 +7,8 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { usePrReviews } from "@/lib/hooks/reviews";
-import { FindingsPopover } from "@/components/findings-popover";
-import type { SeverityCounts } from "@/components/findings-summary";
+import { FindingsPopover } from "@/components/FindingsPopover";
+import type { SeverityCounts } from "@/components/FindingsSummary";
 
 export function PrFindingsHover({
   prId,
