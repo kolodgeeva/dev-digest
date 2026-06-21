@@ -10,6 +10,7 @@ import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
 import { formatCost } from "@/lib/format-cost";
+import { routes } from "@/lib/routes";
 import { HoverCard } from "@/components/HoverCard";
 import { FindingsSummary, type SeverityCounts } from "@/components/FindingsSummary";
 import { PrFindingsHover } from "./PrFindingsHover";
@@ -26,7 +27,7 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
     <div
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
-      onClick={() => router.push(`/repos/${repoId}/pulls/${pr.number}`)}
+      onClick={() => router.push(routes.pull(repoId, pr.number))}
       style={s.row(h)}
     >
       <div style={s.rowTitleCell}>

@@ -8,6 +8,8 @@ import { useTranslations } from "next-intl";
 import { Button, Dropdown, EmptyState, ErrorState, Skeleton, Icon } from "@devdigest/ui";
 import { AppShell } from "../../../../components/app-shell";
 import { useAgents, useUpdateAgent } from "../../../../lib/hooks/agents";
+import { routes } from "../../../../lib/routes";
+import { useDocumentTitle } from "../../../../lib/hooks/use-document-title";
 import { AgentCard } from "../AgentCard";
 import { CreateAgentModal } from "./_components/CreateAgentModal";
 import { TEMPLATES } from "./constants";
@@ -17,6 +19,7 @@ import { s } from "./styles";
 export function AgentsListView() {
   const t = useTranslations("agents");
   const router = useRouter();
+  useDocumentTitle(t("list.title"));
   const { data: agents, isLoading, isError, refetch } = useAgents();
   const update = useUpdateAgent();
   const [creating, setCreating] = React.useState(false);
@@ -86,7 +89,7 @@ export function AgentsListView() {
               <AgentCard
                 key={a.id}
                 ag={a}
-                onClick={() => router.push(`/agents/${a.id}?tab=config`)}
+                onClick={() => router.push(routes.agent(a.id, "config"))}
                 onToggle={(enabled) => update.mutate({ id: a.id, patch: { enabled } })}
               />
             ))}
