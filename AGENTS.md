@@ -40,6 +40,8 @@ server only: `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:generate`
 `repo-intel` (codebase indexer → repo map = review context) lives in `server/src/modules/repo-intel`.
 
 ## Project-wide conventions
+- **Never `git commit` (or push) without the user's explicit approval.** Make the
+  edits, run the checks, show what changed — then wait. Only commit when asked.
 - **Not a monorepo workspace.** Each package has its own `package.json` + lockfile;
   cross-package code is shared via tsconfig path aliases, not published modules.
 - **Tests split by filename**: `*.it.test.ts` = DB-backed (testcontainers Postgres);
