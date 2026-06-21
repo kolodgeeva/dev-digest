@@ -1,5 +1,10 @@
 /* Global 404 — shown for unmatched URLs and explicit notFound() calls.
-   Server Component; uses a plain Link (no event handlers) so it stays static. */
+   Client Component: it pulls `EmptyState` from the `@devdigest/ui` barrel, which
+   re-exports recharts-backed charts that can't evaluate in the RSC server graph
+   ("Super expression must either be null or a function"). Every page in this app
+   imports the barrel as a client component for the same reason. */
+"use client";
+
 import Link from "next/link";
 import { EmptyState } from "@devdigest/ui";
 import { routes } from "@/lib/routes";
