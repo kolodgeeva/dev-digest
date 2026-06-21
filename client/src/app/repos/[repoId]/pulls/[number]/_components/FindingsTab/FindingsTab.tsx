@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React from "react";
 import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
 import { RunStatus } from "../RunStatus";
-import { RunHistory } from "../RunHistory/RunHistory";
+import { RunHistory } from "../RunHistory";
 import { ReviewRunAccordion } from "../ReviewRunAccordion";
 import { s } from "./styles";
 import type { FindingRecord, ReviewRecord, RunSummary, PrCommit } from "@devdigest/shared";
@@ -41,27 +41,12 @@ export function FindingsTab({
   onDelete,
   onRunDone,
 }: FindingsTabProps) {
-  const handleCancelAll = useCallback(() => {
-    liveRunIds.forEach((id) => cancelMutation.mutate(id));
-  }, [liveRunIds, cancelMutation]);
-
-  const handleOpenFirstTrace = useCallback(() => {
+  // Children below are not memoized, so memoizing these handlers buys nothing —
+  // keep them as plain functions.
+  const handleCancelAll = () => liveRunIds.forEach((id) => cancelMutation.mutate(id));
+  const handleOpenFirstTrace = () => {
     if (liveRunIds[0]) onOpenTrace(liveRunIds[0]);
-  }, [liveRunIds, onOpenTrace]);
-
-  const handleOpenTrace = useCallback(
-    (id: string) => {
-      onOpenTrace(id);
-    },
-    [onOpenTrace],
-  );
-
-  const handleDelete = useCallback(
-    (id: string) => {
-      onDelete(id);
-    },
-    [onDelete],
-  );
+  };
 
   // Per-run findings for the timeline's severity badges + hover popover. Keyed
   // by run_id (ReviewRecord.run_id ↔ RunSummary.run_id); runs without a run_id
@@ -78,9 +63,7 @@ export function FindingsTab({
   // opens + scrolls to that run's accordion below. The nonce re-triggers the
   // scroll even when the same run is clicked twice.
   const [target, setTarget] = React.useState<{ runId: string; n: number } | null>(null);
-  const handleGoToReview = useCallback((runId: string) => {
-    setTarget((p) => ({ runId, n: (p?.n ?? 0) + 1 }));
-  }, []);
+  const handleGoToReview = (runId: string) => setTarget((p) => ({ runId, n: (p?.n ?? 0) + 1 }));
 
   return (
     <section>
@@ -143,9 +126,9 @@ export function FindingsTab({
             runs={prRuns ?? []}
             commits={prCommits}
             findingsByRun={findingsByRun}
-            onOpenTrace={handleOpenTrace}
+            onOpenTrace={onOpenTrace}
             onGoToReview={handleGoToReview}
-            onDelete={handleDelete}
+            onDelete={onDelete}
           />
         </div>
       )}
