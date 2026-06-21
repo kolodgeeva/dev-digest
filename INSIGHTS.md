@@ -23,6 +23,7 @@ is a draft under human spot-check — committed to git.
 ## Codebase Patterns
 <!-- conventions, architectural decisions -->
 - 2026-06-17 · codebase-pattern · Zod contracts in `*/vendor/shared/` have NO sync script — `server/src/vendor/shared/` and `client/src/vendor/shared/` are independent copies you must edit identically. Adding/removing one field = two edits (both `trace.ts`, both `platform.ts`, …). Precedent: commit d45ab0d edited both `trace.ts` copies in one go. Forgetting one side compiles in that package but fails the other's typecheck/`.parse`.
+- 2026-06-21 · codebase-pattern · `.claude/skills/README.md` preamble claims a `.cursor/skills/ → ../.claude/skills` symlink exists for Cursor — it does NOT (no `.cursor/` dir in the repo). Skills are picked up from `.claude/skills/` directly. If Cursor compatibility is wanted, create the symlink (`ln -s ../.claude/skills .cursor/skills`); don't assume it's there. New skill added this session: `.claude/skills/frontend-architecture/` (code-placement/folder-structure; SKILL.md + structure.md + README.md), registered in the catalog table. Its scope is deliberately disjoint from `react-best-practices` (hooks/perf) and `next-best-practices` (RSC/data) — keep those boundaries when editing any of the three.
 
 ## Tool & Library Notes
 <!-- dependency quirks/gotchas -->
