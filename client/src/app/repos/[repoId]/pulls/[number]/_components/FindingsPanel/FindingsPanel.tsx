@@ -17,11 +17,14 @@ export function FindingsPanel({
   prId,
   repoFullName,
   headSha,
+  focusFindingId = null,
 }: {
   findings: FindingRecord[];
   prId: string;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** Deep-linked finding (?finding) → expand + scroll + highlight this card. */
+  focusFindingId?: string | null;
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
@@ -62,7 +65,8 @@ export function FindingsPanel({
             <FindingCard
               key={f.id}
               f={f}
-              focused={i === focusIdx}
+              focused={i === focusIdx || f.id === focusFindingId}
+              autoFocus={f.id === focusFindingId}
               defaultExpanded={i === 0}
               pending={action.isPending}
               repoFullName={repoFullName}

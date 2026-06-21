@@ -21,7 +21,11 @@ interface FindingsTabProps {
   /** owner/repo + head sha — used to deep-link a finding's file:line to GitHub. */
   repoFullName?: string | null;
   headSha?: string | null;
+  /** ?finding=<id> from the PR-list popover → open its run + scroll/highlight it. */
+  targetFindingId?: string | null;
   onOpenTrace: (id: string) => void;
+  /** Click a finding in a timeline run's popover → scroll/highlight its card. */
+  onGoToFinding: (id: string) => void;
   onDelete: (id: string) => void;
   onRunDone: () => void;
 }
@@ -37,7 +41,9 @@ export function FindingsTab({
   cancelMutation,
   repoFullName,
   headSha,
+  targetFindingId,
   onOpenTrace,
+  onGoToFinding,
   onDelete,
   onRunDone,
 }: FindingsTabProps) {
@@ -128,6 +134,7 @@ export function FindingsTab({
             findingsByRun={findingsByRun}
             onOpenTrace={onOpenTrace}
             onGoToReview={handleGoToReview}
+            onGoToFinding={onGoToFinding}
             onDelete={onDelete}
           />
         </div>
@@ -157,6 +164,7 @@ export function FindingsTab({
             defaultOpen={i === 0}
             repoFullName={repoFullName}
             headSha={headSha}
+            focusFindingId={targetFindingId}
             targetRunId={target?.runId ?? null}
             targetNonce={target?.n ?? 0}
           />

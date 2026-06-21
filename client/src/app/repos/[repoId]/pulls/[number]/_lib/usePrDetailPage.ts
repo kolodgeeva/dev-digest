@@ -67,7 +67,11 @@ export function usePrDetailPage() {
       deleteRun.mutate(id);
   };
 
-  const tab = search.get("tab") ?? "overview";
+  // ?finding=<id> deep-links a specific finding (from the PR-list popover): the
+  // detail page opens its run accordion and scrolls/highlights the card. Default
+  // the tab to findings so the deep-link lands on the right surface.
+  const targetFindingId = search.get("finding");
+  const tab = search.get("tab") ?? (targetFindingId ? "findings" : "overview");
   const traceRunId = search.get("trace");
   const setParam = (key: string, val: string | null) => {
     const sp = new URLSearchParams(search.toString());
@@ -111,6 +115,7 @@ export function usePrDetailPage() {
     crumb,
     tab,
     traceRunId,
+    targetFindingId,
     setParam,
     setTab,
     liveRunIds,

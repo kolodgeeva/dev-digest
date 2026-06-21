@@ -6,6 +6,10 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 // Stub the lazy reviews fetch with a fixed latest review.
 const reviews = [
   {
@@ -36,12 +40,12 @@ afterEach(cleanup);
 
 describe("PrFindingsHover — click-to-filter", () => {
   it("shows all findings when no severity is active", () => {
-    render(<PrFindingsHover prId="pr-1" activeSeverity={null} />);
+    render(<PrFindingsHover prId="pr-1" repoId="r1" prNumber={1} activeSeverity={null} />);
     expect(screen.getAllByRole("listitem")).toHaveLength(4);
   });
 
   it("shows only the active severity's findings", () => {
-    render(<PrFindingsHover prId="pr-1" activeSeverity="CRITICAL" />);
+    render(<PrFindingsHover prId="pr-1" repoId="r1" prNumber={1} activeSeverity="CRITICAL" />);
     const items = screen.getAllByRole("listitem").map((n) => n.textContent);
     expect(items).toEqual(["Crit A", "Crit B"]);
   });

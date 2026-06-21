@@ -59,6 +59,7 @@ export function RunRow({
   findings,
   onOpenTrace,
   onGoToReview,
+  onGoToFinding,
   onDelete,
 }: {
   run: RunSummary;
@@ -66,6 +67,8 @@ export function RunRow({
   findings?: FindingRecord[];
   onOpenTrace: (runId: string) => void;
   onGoToReview?: (runId: string) => void;
+  /** Click a finding in the popover → scroll/highlight its card below. */
+  onGoToFinding?: (findingId: string) => void;
   onDelete?: (runId: string) => void;
 }) {
   const t = useTranslations("prReview");
@@ -117,7 +120,7 @@ export function RunRow({
           // render the hoverable severity badges; otherwise keep the plain text
           // summary (legacy rows / runs with no findings).
           (findings && counts && counts.CRITICAL + counts.WARNING + counts.SUGGESTION > 0 ? (
-            <RunFindings findings={findings} />
+            <RunFindings findings={findings} onGoToFinding={onGoToFinding} />
           ) : (
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
               {t("runStatus.findings", { count: r.findings_count ?? 0 })}

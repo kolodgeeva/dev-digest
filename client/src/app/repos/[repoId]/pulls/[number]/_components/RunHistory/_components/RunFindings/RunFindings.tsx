@@ -13,7 +13,14 @@ import { countSeverities } from "../../helpers";
  * resets when the popover closes. Each run owns its own `activeSeverity` state,
  * so this must be its own component (can't useState inside the timeline map).
  */
-export function RunFindings({ findings }: { findings: FindingRecord[] }) {
+export function RunFindings({
+  findings,
+  onGoToFinding,
+}: {
+  findings: FindingRecord[];
+  /** Click a finding row → scroll/highlight its card in the Review runs below. */
+  onGoToFinding?: (findingId: string) => void;
+}) {
   const [activeSeverity, setActiveSeverity] = React.useState<keyof SeverityCounts | null>(null);
   const counts = countSeverities(findings);
   const shown = activeSeverity ? findings.filter((f) => f.severity === activeSeverity) : findings;
@@ -29,7 +36,11 @@ export function RunFindings({ findings }: { findings: FindingRecord[] }) {
           />
         }
       >
-        <FindingsPopover findings={shown} inThisRun />
+        <FindingsPopover
+          findings={shown}
+          inThisRun
+          onFindingClick={onGoToFinding ? (f) => onGoToFinding(f.id) : undefined}
+        />
       </HoverCard>
     </div>
   );

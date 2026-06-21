@@ -20,13 +20,80 @@ function lineLabel(f: Pick<FindingRecord, "start_line" | "end_line">): string {
   return f.end_line > f.start_line ? `${f.start_line}–${f.end_line}` : `${f.start_line}`;
 }
 
+/** One finding row. A native <button> when `onClick` is given (keyboard-reachable
+ *  jump to the finding), otherwise a plain read-only row. */
+function FindingRow({
+  finding: f,
+  onClick,
+}: {
+  finding: FindingRecord;
+  onClick?: (finding: FindingRecord) => void;
+}) {
+  const [hover, setHover] = React.useState(false);
+  const clickable = !!onClick;
+  const rowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: "7px 8px",
+    borderRadius: 6,
+    width: "100%",
+    textAlign: "left",
+    border: "none",
+    background: clickable && hover ? "var(--bg-hover)" : "transparent",
+    cursor: clickable ? "pointer" : "default",
+    font: "inherit",
+    color: "inherit",
+  };
+  const body = (
+    <>
+      <span style={{ flexShrink: 0, marginTop: 1 }}>
+        <SeverityBadge severity={f.severity as Severity} compact />
+      </span>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.35 }}>
+          {f.title}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
+          <CategoryTag category={f.category as Category} />
+          <span
+            className="mono"
+            title={`${f.file}:${lineLabel(f)}`}
+            style={{ fontSize: 11.5, color: "var(--text-muted)", minWidth: 0, overflowWrap: "anywhere" }}
+          >
+            {f.file}:{lineLabel(f)}
+          </span>
+          <ConfidenceNum value={f.confidence} />
+        </div>
+      </div>
+    </>
+  );
+
+  if (!clickable) return <div style={rowStyle}>{body}</div>;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(f)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={rowStyle}
+    >
+      {body}
+    </button>
+  );
+}
+
 export function FindingsPopover({
   findings,
   inThisRun = false,
+  onFindingClick,
 }: {
   findings: FindingRecord[];
   /** Use the "{count} findings in this run" header (detail timeline). */
   inThisRun?: boolean;
+  /** When set, each row is a button that calls this on click (PR list → jump to
+   *  the finding on the detail page). Omit it for a read-only list. */
+  onFindingClick?: (finding: FindingRecord) => void;
 }) {
   const t = useTranslations("prReview");
   const count = findings.length;
@@ -63,56 +130,7 @@ export function FindingsPopover({
           }}
         >
           {findings.map((f) => (
-            <div
-              key={f.id}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 8,
-                padding: "7px 8px",
-                borderRadius: 6,
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: 1 }}>
-                <SeverityBadge severity={f.severity as Severity} compact />
-              </span>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: "var(--text-primary)",
-                    lineHeight: 1.35,
-                  }}
-                >
-                  {f.title}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginTop: 3,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <CategoryTag category={f.category as Category} />
-                  <span
-                    className="mono"
-                    title={`${f.file}:${lineLabel(f)}`}
-                    style={{
-                      fontSize: 11.5,
-                      color: "var(--text-muted)",
-                      minWidth: 0,
-                      overflowWrap: "anywhere",
-                    }}
-                  >
-                    {f.file}:{lineLabel(f)}
-                  </span>
-                  <ConfidenceNum value={f.confidence} />
-                </div>
-              </div>
-            </div>
+            <FindingRow key={f.id} finding={f} onClick={onFindingClick} />
           ))}
         </div>
       )}

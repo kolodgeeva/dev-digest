@@ -29,6 +29,7 @@ export function ReviewRunAccordion({
   defaultOpen = false,
   repoFullName,
   headSha,
+  focusFindingId = null,
   targetRunId = null,
   targetNonce = 0,
 }: {
@@ -37,6 +38,9 @@ export function ReviewRunAccordion({
   defaultOpen?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** When one of this run's findings matches, force the accordion open so the
+   *  card can scroll into view (PR-list popover → ?finding deep-link). */
+  focusFindingId?: string | null;
   /** When this matches review.run_id, the accordion opens and scrolls into view
    *  (driven from the Timeline: clicking an agent name navigates here). */
   targetRunId?: string | null;
@@ -44,6 +48,8 @@ export function ReviewRunAccordion({
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const findings = review.findings;
+  const hasFocusFinding = !!focusFindingId && findings.some((f) => f.id === focusFindingId);
   React.useEffect(() => {
     if (review.run_id && review.run_id === targetRunId) {
       setOpen(true);
@@ -51,8 +57,11 @@ export function ReviewRunAccordion({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetRunId, targetNonce, review.run_id]);
+  // Deep-linked finding lives in this run → expand so its card mounts + scrolls.
+  React.useEffect(() => {
+    if (hasFocusFinding) setOpen(true);
+  }, [hasFocusFinding]);
   const del = useDeleteReview(prId);
-  const findings = review.findings;
   const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;
   const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
 
@@ -152,6 +161,7 @@ export function ReviewRunAccordion({
             prId={prId}
             repoFullName={repoFullName}
             headSha={headSha}
+            focusFindingId={focusFindingId}
           />
         </div>
       )}

@@ -17,6 +17,7 @@ export function RunHistory({
   findingsByRun,
   onOpenTrace,
   onGoToReview,
+  onGoToFinding,
   onDelete,
 }: {
   runs: RunSummary[];
@@ -27,6 +28,8 @@ export function RunHistory({
   onOpenTrace: (runId: string) => void;
   /** Jump to this run's inline review accordion below (clicking the agent name). */
   onGoToReview?: (runId: string) => void;
+  /** Jump to a specific finding's card below (clicking a row in the popover). */
+  onGoToFinding?: (findingId: string) => void;
   onDelete?: (runId: string) => void;
 }) {
   if (runs.length === 0 && commits.length === 0) return null;
@@ -52,6 +55,7 @@ export function RunHistory({
             findings={findingsByRun?.get(item.run.run_id)}
             onOpenTrace={onOpenTrace}
             onGoToReview={onGoToReview}
+            onGoToFinding={onGoToFinding}
             onDelete={onDelete}
           />
         ),

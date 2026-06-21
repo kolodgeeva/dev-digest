@@ -29,6 +29,7 @@ export default function PRDetailPage() {
     crumb,
     tab,
     traceRunId,
+    targetFindingId,
     setParam,
     setTab,
     liveRunIds,
@@ -107,7 +108,9 @@ export default function PRDetailPage() {
             repoFullName={repoFullName}
             headSha={pr.head_sha}
             cancelMutation={cancel}
+            targetFindingId={targetFindingId}
             onOpenTrace={(id) => setParam("trace", id)}
+            onGoToFinding={(id) => setParam("finding", id)}
             onDelete={onDeleteRun}
             onRunDone={onRunDone}
           />

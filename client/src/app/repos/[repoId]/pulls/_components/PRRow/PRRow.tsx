@@ -71,7 +71,12 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
               />
             }
           >
-            <PrFindingsHover prId={pr.id} activeSeverity={activeSeverity} />
+            <PrFindingsHover
+              prId={pr.id}
+              repoId={repoId}
+              prNumber={pr.number}
+              activeSeverity={activeSeverity}
+            />
           </HoverCard>
         ) : (
           <span style={s.muted}>—</span>
