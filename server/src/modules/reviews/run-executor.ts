@@ -1,6 +1,7 @@
 import type { Container } from '../../platform/container.js';
 import type { Provider, Review, RunTrace, UnifiedDiff } from '@devdigest/shared';
 import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
+import { skillPromptBlock } from '../skills/helpers.js';
 import { RunLogger } from '../../platform/run-logger.js';
 import * as schema from '../../db/schema.js';
 import type { AgentRow } from '../../db/rows.js';
@@ -183,6 +184,13 @@ export class ReviewRunExecutor {
 
       const task = taskLine(pull) + rankNote;
 
+      // Linked skills → the engine's `## Skills / rules` prompt block. The slot
+      // existed from the start; here we feed it the agent's enabled, ordered
+      // skill bodies. Imported/community bodies are delimiter-wrapped as
+      // untrusted (a community skill is third-party text, a prime injection
+      // vector); manual/extracted skills are trusted and pass through.
+      const skillBlocks = await this.buildSkillBlocks(agent.id, runLog);
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -203,6 +211,9 @@ export class ReviewRunExecutor {
         // PR author's description/body — untrusted; assemblePrompt wraps +
         // truncates it. Omitted when the PR has no body.
         ...(pull.body ? { prDescription: pull.body } : {}),
+        // Linked skills (enabled, ordered; untrusted sources pre-wrapped).
+        // Omitted when the agent has none, preserving the prior prompt shape.
+        ...(skillBlocks.length ? { skills: skillBlocks } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),
@@ -356,6 +367,29 @@ export class ReviewRunExecutor {
     }
     runLog.info(`callers digest: ${rows.length} caller signature(s) attached`);
     return out.join('\n');
+  }
+
+  /**
+   * Resolve the agent's linked skills into prompt-ready strings for the engine's
+   * `## Skills / rules` block. Only enabled skills, in their linked order.
+   * Imported/community bodies are wrapped as untrusted (third-party text — a
+   * prime injection vector); manual/extracted bodies pass through trusted.
+   * Returns [] when the agent has no enabled skills (section omitted upstream).
+   */
+  private async buildSkillBlocks(agentId: string, runLog: RunLogger): Promise<string[]> {
+    let linked;
+    try {
+      linked = await this.agents.linkedSkills(agentId);
+    } catch (err) {
+      runLog.info(`skills: load failed — ${(err as Error).message}`);
+      return [];
+    }
+    const blocks = linked
+      .map((l) => l.skill)
+      .filter((s) => s.enabled)
+      .map((s) => skillPromptBlock(s));
+    if (blocks.length) runLog.info(`skills: ${blocks.length} linked skill(s) injected`);
+    return blocks;
   }
 
   /**

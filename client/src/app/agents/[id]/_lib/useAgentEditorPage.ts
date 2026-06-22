@@ -8,7 +8,7 @@ import { useAgents, useAgent, useUpdateAgent } from "@/lib/hooks/agents";
 import { routes } from "@/lib/routes";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
 
-const VALID_TABS = ["config"];
+const VALID_TABS = ["config", "skills"];
 
 export function useAgentEditorPage() {
   const params = useParams<{ id: string }>();

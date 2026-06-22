@@ -10,5 +10,7 @@ export const routes = {
   pull: (repoId: string, number: number | string) => `/repos/${repoId}/pulls/${number}`,
   agents: () => "/agents",
   agent: (id: string, tab?: string) => (tab ? `/agents/${id}?tab=${tab}` : `/agents/${id}`),
+  skills: () => "/skills",
+  skill: (id: string, tab?: string) => (tab ? `/skills/${id}?tab=${tab}` : `/skills/${id}`),
   settings: (section: string) => `/settings/${section}`,
 } as const;
