@@ -2,6 +2,7 @@
   "page": {
     "crumbLab": "Skills Lab",
     "crumbConventions": "Conventions",
+    "heading": "Conventions",
     "headingPrefix": "Conventions in ",
     "repoFallback": "repo",
     "subtitle": "Scan the cloned repo to surface house-rules — each backed by evidence you can turn into a Skill.",
@@ -10,6 +11,11 @@
     "runExtraction": "Run extraction",
     "extractionFailed": "Extraction failed",
     "loadError": "Could not load conventions.",
+    "noRepo": "Select a repository to scan for conventions.",
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject all",
+    "createSkill": "Create skill",
+    "createSkillHint": "Accept at least one convention to build a skill.",
     "empty": {
       "title": "No conventions extracted yet",
       "body": "Scan the repo to surface house-rules — naming, error handling, structure — each backed by evidence you can turn into a Skill.",
@@ -21,6 +27,28 @@
     "confidence": "Confidence",
     "accepted": "Accepted",
     "accepting": "Accepting…",
-    "acceptAsSkill": "Accept as Skill"
+    "acceptAsSkill": "Accept as Skill",
+    "accept": "Accept",
+    "reject": "Reject",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "rulePlaceholder": "Convention rule",
+    "snippetPlaceholder": "Evidence snippet"
+  },
+  "modal": {
+    "title": "Create skill from conventions",
+    "subtitlePrefix": "Merged from ",
+    "subtitleSuffix": " accepted conventions. Everything below is editable before you save.",
+    "name": "Name",
+    "description": "Description",
+    "type": "Type",
+    "enabled": "Enabled",
+    "enabledHint": "Whether this block is added to agents' prompts.",
+    "body": "Skill body",
+    "cancel": "Cancel",
+    "create": "Create skill",
+    "creating": "Creating…",
+    "createdToast": "Created skill {name}"
   }
 }

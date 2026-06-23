@@ -12,5 +12,6 @@ export const routes = {
   agent: (id: string, tab?: string) => (tab ? `/agents/${id}?tab=${tab}` : `/agents/${id}`),
   skills: () => "/skills",
   skill: (id: string, tab?: string) => (tab ? `/skills/${id}?tab=${tab}` : `/skills/${id}`),
+  conventions: () => "/conventions",
   settings: (section: string) => `/settings/${section}`,
 } as const;

@@ -3,8 +3,11 @@ import {
   FEATURE_MODELS,
   FeatureModelChoice,
   type FeatureModelId,
+  type LLMProvider,
+  type Provider,
 } from '@devdigest/shared';
 import type { Container } from '../../platform/container.js';
+import { ConfigError } from '../../platform/errors.js';
 import * as t from '../../db/schema.js';
 import { rowsToSettings } from './helpers.js';
 
@@ -54,4 +57,50 @@ export async function resolveFeatureModel(
   id: FeatureModelId,
 ): Promise<FeatureModelChoice> {
   return (await getFeatureModelOverride(container, workspaceId, id)) ?? DEFAULTS[id];
+}
+
+/**
+ * Provider tried when the resolved feature-model provider has no key configured,
+ * in preference order, each with a known-good default model for that provider.
+ * Lets a system feature run on WHATEVER provider the user actually configured a
+ * key for instead of hard-failing on the registry default's provider.
+ */
+const PROVIDER_FALLBACKS: { provider: Provider; model: string }[] = [
+  { provider: 'openrouter', model: 'deepseek/deepseek-v4-flash' },
+  { provider: 'anthropic', model: 'claude-3-5-sonnet-latest' },
+  { provider: 'openai', model: 'gpt-4.1' },
+];
+
+/**
+ * Resolve a feature to an LLM provider INSTANCE + model, guaranteeing the
+ * provider's API key is configured. Tries the resolved feature-model provider
+ * first (keeping its model); on a missing-key `ConfigError`, falls back to the
+ * first other provider whose key IS configured (with that provider's default
+ * model). Throws a clear `ConfigError` only when NO provider key exists.
+ *
+ * `container.llm()` returns a test-injected mock before any key lookup, so this
+ * stays correct under `overrides.llm`.
+ */
+export async function resolveAvailableLlm(
+  container: Container,
+  workspaceId: string,
+  id: FeatureModelId,
+): Promise<{ llm: LLMProvider; model: string }> {
+  const chosen = await resolveFeatureModel(container, workspaceId, id);
+  try {
+    return { llm: await container.llm(chosen.provider), model: chosen.model };
+  } catch (err) {
+    if (!(err instanceof ConfigError)) throw err;
+  }
+  for (const fallback of PROVIDER_FALLBACKS) {
+    if (fallback.provider === chosen.provider) continue;
+    try {
+      return { llm: await container.llm(fallback.provider), model: fallback.model };
+    } catch (err) {
+      if (!(err instanceof ConfigError)) throw err;
+    }
+  }
+  throw new ConfigError(
+    'No LLM provider key configured. Add an OpenAI, Anthropic, or OpenRouter key in Settings → API Keys.',
+  );
 }

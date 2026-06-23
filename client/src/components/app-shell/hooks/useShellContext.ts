@@ -7,7 +7,8 @@ import { useTranslations } from "next-intl";
 import { type ShellContext } from "@devdigest/ui";
 import { useTheme } from "../../../lib/theme";
 import { useActiveRepo } from "../../../lib/repo-context";
-import { usePulls, useDeleteRepo } from "../../../lib/hooks";
+import { usePulls, useDeleteRepo, useRefreshRepo } from "../../../lib/hooks";
+import { useToast } from "../../../lib/toast";
 import { routes } from "../../../lib/routes";
 import { activeKeyFor, toShellRepo } from "../helpers";
 
@@ -28,6 +29,8 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
   const { repoId, repos, activeRepo, setRepoId } = useActiveRepo();
   const { data: pulls } = usePulls(repoId);
   const deleteRepo = useDeleteRepo();
+  const refreshRepo = useRefreshRepo();
+  const toast = useToast();
 
   const onSelectRepo = React.useCallback(
     (id: string) => {
@@ -38,6 +41,19 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
   );
 
   const onAddRepo = React.useCallback(() => router.push(routes.onboarding()), [router]);
+
+  const onSyncRepo = React.useCallback(
+    (id: string) => {
+      const target = repos.find((r) => r.id === id);
+      // Re-clone + (auto) re-index; clone/index run in the background.
+      refreshRepo.mutate(id, {
+        onSuccess: () =>
+          toast.success(t("syncRepo.started", { name: target?.full_name ?? t("syncRepo.fallbackName") })),
+        onError: () => toast.error(t("syncRepo.failed")),
+      });
+    },
+    [repos, refreshRepo, toast, t],
+  );
 
   const onRemoveRepo = React.useCallback(
     (id: string) => {
@@ -71,6 +87,8 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
       onSelectRepo,
       onAddRepo,
       onRemoveRepo,
+      onSyncRepo,
+      syncingRepoId: refreshRepo.isPending ? refreshRepo.variables ?? null : null,
       // Sidebar badge = PRs that still NEED review, not the total PR count.
       // 0 → undefined so the badge hides entirely when nothing needs review.
       prCount: pulls?.filter((p) => p.status === "needs_review").length || undefined,
@@ -86,6 +104,9 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
       onSelectRepo,
       onAddRepo,
       onRemoveRepo,
+      onSyncRepo,
+      refreshRepo.isPending,
+      refreshRepo.variables,
       pulls,
     ],
   );
