@@ -5,6 +5,7 @@ import type { ShellContext } from "./types";
 
 export function RepoSwitcher({ ctx }: { ctx: ShellContext }) {
   const active = ctx.activeRepo;
+  const syncing = !!active && ctx.syncingRepoId === active.id;
   const items: DropdownItemDef[] = [
     ...(ctx.repos ?? []).map((r) => ({
       label: r.full_name,
@@ -15,6 +16,18 @@ export function RepoSwitcher({ ctx }: { ctx: ShellContext }) {
         : {}),
     })),
     ...(ctx.repos && ctx.repos.length ? [{ divider: true }] : []),
+    // Re-clone + re-index the active repo (needed before features like Conventions
+    // that require an indexed repo). Available on every page via the switcher.
+    ...(active && ctx.onSyncRepo
+      ? [
+          {
+            label: "Sync repo",
+            icon: "RefreshCw" as const,
+            hint: syncing ? "Syncing…" : undefined,
+            onClick: () => ctx.onSyncRepo!(active.id),
+          },
+        ]
+      : []),
     { label: "Add repository…", icon: "Plus", muted: true, onClick: () => ctx.onAddRepo?.() },
   ];
   return (
@@ -63,7 +76,9 @@ export function RepoSwitcher({ ctx }: { ctx: ShellContext }) {
               {active?.full_name ?? "No repo selected"}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {active ? `${active.default_branch ?? "main"} · ${active.syncedLabel ?? "not synced"}` : "Add a repo to begin"}
+              {active
+                ? `${active.default_branch ?? "main"} · ${syncing ? "syncing…" : active.syncedLabel ?? "not synced"}`
+                : "Add a repo to begin"}
             </div>
           </div>
           <Icon.ChevronsUpDown size={14} style={{ color: "var(--text-muted)" }} />

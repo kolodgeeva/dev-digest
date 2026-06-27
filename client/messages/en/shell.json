@@ -14,6 +14,11 @@
     "confirm": "Remove {name} from DevDigest?\n\nThis only removes it from DevDigest (and its imported PRs). Nothing is deleted on GitHub, and your local clone on disk is left untouched.",
     "fallbackName": "this repository"
   },
+  "syncRepo": {
+    "started": "Syncing {name} — cloning + indexing in the background.",
+    "failed": "Could not start sync.",
+    "fallbackName": "this repository"
+  },
   "nav": {
     "pulls": "Pull Requests",
     "onboarding-tour": "Onboarding Tour",

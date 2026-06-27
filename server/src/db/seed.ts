@@ -7,6 +7,7 @@ import {
   SECURITY_REVIEWER_PROMPT,
   PERFORMANCE_REVIEWER_PROMPT,
 } from './seed-prompts.js';
+import { SEED_SKILLS } from './seed-skills.js';
 
 /** Default provider/model for the built-in reviewer agents. */
 const DEFAULT_PROVIDER = 'openrouter' as const;
@@ -18,11 +19,12 @@ const DEFAULT_MODEL = 'deepseek/deepseek-v4-flash';
  *
  * Seeds: default workspace + system user + membership, default settings,
  * demo repo (acme/payments-api), PR #482 with files/commits, a sample review
- * with a few findings, and the three built-in agents (General + Security +
- * Performance), all on the default openrouter/deepseek-v4-flash provider+model.
+ * with a few findings, the three built-in agents (General + Security +
+ * Performance), all on the default openrouter/deepseek-v4-flash provider+model,
+ * and a set of demo skills (see `seed-skills.ts`) linked to those agents.
  *
- * Course lessons populate the other tables (skills, conventions, memory, eval,
- * …) once their features are built — they start empty here.
+ * Course lessons populate the remaining tables (conventions, memory, eval, …)
+ * once their features are built — they start empty here.
  */
 
 export const DEFAULT_WORKSPACE_NAME = 'default';
@@ -218,6 +220,55 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       .from(t.agents)
       .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.name, a.name)));
     if (!existing) await db.insert(t.agents).values(a);
+  }
+
+  // ---- demo skills + agent links (lesson A1) ----
+  // Reusable review skills (see ./seed-skills.ts), upserted by name and linked
+  // to the built-in agents. Body snapshot v1 mirrors the repository's real
+  // versioning; the per-agent link `order` is the prompt-injection order.
+  const agentRows = await db
+    .select({ id: t.agents.id, name: t.agents.name })
+    .from(t.agents)
+    .where(eq(t.agents.workspaceId, workspaceId));
+  const agentIdByName = new Map(agentRows.map((a) => [a.name, a.id]));
+  const linkOrderByAgent = new Map<string, number>(); // next free order slot per agent
+
+  for (const sk of SEED_SKILLS) {
+    let [skill] = await db
+      .select()
+      .from(t.skills)
+      .where(and(eq(t.skills.workspaceId, workspaceId), eq(t.skills.name, sk.name)));
+    if (!skill) {
+      [skill] = await db
+        .insert(t.skills)
+        .values({
+          workspaceId,
+          name: sk.name,
+          description: sk.description,
+          type: sk.type,
+          source: sk.source,
+          body: sk.body,
+          enabled: sk.enabled ?? true,
+          version: 1,
+          ...(sk.evidenceFiles ? { evidenceFiles: sk.evidenceFiles } : {}),
+        })
+        .returning();
+      await db
+        .insert(t.skillVersions)
+        .values({ skillId: skill!.id, version: 1, body: skill!.body })
+        .onConflictDoNothing();
+    }
+
+    for (const agentName of sk.linkTo ?? []) {
+      const agentId = agentIdByName.get(agentName);
+      if (!agentId) continue;
+      const order = linkOrderByAgent.get(agentId) ?? 0;
+      linkOrderByAgent.set(agentId, order + 1);
+      await db
+        .insert(t.agentSkills)
+        .values({ agentId, skillId: skill!.id, order })
+        .onConflictDoNothing();
+    }
   }
 
   return { workspaceId, userId };

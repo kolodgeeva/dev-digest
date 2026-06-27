@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
-import { HoverCard } from "./hover-card";
+import { HoverCard } from "./HoverCard";
 
 afterEach(() => {
   cleanup();

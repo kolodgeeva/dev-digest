@@ -6,15 +6,17 @@
     "addSkill": "Add Skill",
     "searchPlaceholder": "Search skills…",
     "loadError": "Could not load skills.",
+    "deleteConfirm": "Delete skill \"{name}\"? This cannot be undone.",
     "menu": {
+      "blank": "New blank skill",
       "fromFile": "Import from file",
       "fromUrl": "Import from URL",
       "community": "Search community skills…"
     },
     "empty": {
       "title": "No skills yet",
-      "body": "Import a skill from a file, a URL, or the community catalog.",
-      "cta": "Import from file"
+      "body": "Create a blank skill, import one from a file, or browse the community catalog.",
+      "cta": "New blank skill"
     },
     "selectPrompt": {
       "title": "Select a skill",
@@ -30,9 +32,33 @@
       "body": "It may have been deleted."
     }
   },
+  "editor": {
+    "tabs": {
+      "config": "Config",
+      "preview": "Preview"
+    },
+    "name": "Name",
+    "namePlaceholder": "pr-quality-rubric",
+    "description": "Description",
+    "descriptionPlaceholder": "What this skill checks for…",
+    "type": "Type",
+    "enabled": "Enabled",
+    "body": "Skill body (Markdown)",
+    "bodyHint": "Injected into the reviewing agent's prompt as review guidance.",
+    "bodyPlaceholder": "# Rule\nDescribe the rule…",
+    "untrustedNotice": "Imported from an untrusted source — its body is wrapped as data (delimiter-wrapped) and must be vetted before you enable it for an agent.",
+    "save": "Save skill",
+    "saving": "Saving…",
+    "savedToast": "Saved \"{name}\" (v{version}).",
+    "createdToast": "Created \"{name}\".",
+    "newName": "Untitled skill",
+    "version": "v{version}",
+    "previewHint": "Rendered as the reviewing agent receives it.",
+    "previewEmpty": "Add a body in the Config tab to preview it."
+  },
   "drawer": {
     "title": "Add a skill",
-    "subtitle": "Import from a file, a URL, or search vetted community skills",
+    "subtitle": "Import from a file or search vetted community skills",
     "tabs": {
       "file": "From file",
       "url": "From URL",
@@ -44,6 +70,7 @@
     "nameLabel": "Skill name",
     "nameHint": "Optional — derived from the first heading if blank.",
     "namePlaceholder": "pr-quality-rubric",
+    "pick": "Choose a .md file…",
     "bodyLabel": "Skill body (Markdown)",
     "bodyHint": "Pasted content is wrapped as untrusted data — never executed as instructions.",
     "bodyPlaceholder": "# Rule\nDescribe the rule…",
@@ -64,6 +91,7 @@
     "allLanguages": "All languages",
     "loadError": "Could not load community skills",
     "retry": "Retry",
+    "selectPrompt": "Select a skill to preview its body.",
     "noMatch": {
       "title": "No matching skills",
       "body": "Try a different search term."

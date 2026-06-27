@@ -32,6 +32,10 @@ export interface ShellContext {
   onAddRepo?: () => void;
   /** Invoked when the user removes a repo via the trash action in the switcher. */
   onRemoveRepo?: (id: string) => void;
+  /** Invoked when the user picks "Sync repo" in the switcher (re-clone + re-index). */
+  onSyncRepo?: (id: string) => void;
+  /** The repo id currently syncing (so the switcher can show a "Syncing…" state). */
+  syncingRepoId?: string | null;
   onRefresh?: () => void;
   prCount?: number;
 }

@@ -4,6 +4,9 @@
    web fonts. */
 @import "../vendor/ui/styles.css";
 
+/* Local-first by design: use Inter only if the user already has it installed —
+   NO web-font fetch (the project makes outbound calls only to GitHub + the LLM).
+   Falls back to the system sans stack (see vendor styles.css `body`). */
 @font-face {
   font-family: "Inter";
   font-style: normal;

@@ -26,6 +26,7 @@ import { s } from "./styles";
 export function FindingCard({
   f,
   focused,
+  autoFocus,
   defaultExpanded,
   onAction,
   pending,
@@ -34,6 +35,8 @@ export function FindingCard({
 }: {
   f: FindingRecord;
   focused?: boolean;
+  /** Deep-linked target (?finding): expand and scroll this card into view on mount. */
+  autoFocus?: boolean;
   defaultExpanded?: boolean;
   onAction?: (action: FindingActionKind, reply?: string) => void;
   pending?: boolean;
@@ -42,6 +45,12 @@ export function FindingCard({
 }) {
   const t = useTranslations("prReview");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!autoFocus) return;
+    setExpanded(true);
+    rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [autoFocus]);
   const sevColor = SEV_COLOR[f.severity] ?? SEV_COLOR_FALLBACK;
   const fileHref =
     repoFullName && headSha
@@ -52,7 +61,7 @@ export function FindingCard({
   const muted = accepted || dismissed;
 
   return (
-    <div data-finding-id={f.id} style={s.card(!!focused, sevColor, muted)}>
+    <div ref={rootRef} data-finding-id={f.id} style={{ ...s.card(!!focused, sevColor, muted), scrollMarginTop: 72 }}>
       <div onClick={() => setExpanded((e) => !e)} style={s.header}>
         <div style={s.badgeWrap}>
           <SeverityBadge severity={f.severity as Severity} compact />
