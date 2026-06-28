@@ -49,6 +49,11 @@ Read `.claude/plans/<slug>.md`. Identify your slice: your tasks, your owned file
 acceptance criteria, your skills. Read the relevant package `AGENTS.md` for the area you're
 working in.
 
+- **Read economically.** Read your slice's section + your owned files + the exact patterns
+  the plan cites by `file:line`. Do NOT re-explore or re-map the codebase the plan already
+  covered, and do NOT read other slices' files. The plan is your context handoff — trust it
+  instead of re-deriving it.
+
 ## 3. Step 2 — Read module insights just-in-time
 
 Before writing in a package/module, read its `INSIGHTS.md` (`server/`, `client/`,

@@ -40,6 +40,41 @@ import { parseUnifiedDiff } from './git/diff-parser.js';
  * for completeStructured, so review/grounding flows can be tested end-to-end.
  */
 
+/**
+ * Default per-schemaName fixtures for multi-step LLM flows. Tests that exercise
+ * a structured LLM feature should pass `{ structuredBySchema: MOCK_STRUCTURED_FIXTURES }`
+ * (or a subset) to `MockLLMProvider` so the mock returns schema-valid data.
+ *
+ * Fixtures keyed by schemaName (must stay in sync with the schemaName constants
+ * in each module's schemas.ts):
+ *   - 'ConventionFileSelection' / 'ConventionExtraction' → conventions extractor
+ *   - 'IntentClassification' → PR intent classifier
+ */
+export const MOCK_STRUCTURED_FIXTURES: Record<string, unknown> = {
+  /** conventions/schemas.ts → FILE_SELECTION_SCHEMA */
+  ConventionFileSelection: {
+    files: ['src/config.ts'],
+  },
+  /** conventions/schemas.ts → EXTRACTION_SCHEMA */
+  ConventionExtraction: {
+    candidates: [
+      {
+        category: 'error-handling',
+        rule: 'All route handlers return Result<T, E>',
+        evidence_path: 'src/config.ts',
+        evidence_snippet: 'port: 3000,',
+        confidence: 0.9,
+      },
+    ],
+  },
+  /** intent/schemas.ts → INTENT_SCHEMA */
+  IntentClassification: {
+    intent: 'Add rate limiting to public API endpoints to prevent abuse',
+    in_scope: ['Rate limiting middleware', 'Public API routes', 'Configuration for limits'],
+    out_of_scope: ['Authentication changes', 'Database schema changes', 'Frontend updates'],
+  },
+};
+
 // ---------- Mock LLM ----------
 export interface MockLLMOptions {
   models?: ModelInfo[];

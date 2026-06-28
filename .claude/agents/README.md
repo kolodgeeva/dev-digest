@@ -160,6 +160,32 @@ design points:
 
 ---
 
+## Spawn economy (when to delegate vs do inline)
+
+Each subagent is a **cold start** — it does NOT share the parent's prompt cache, so
+every spawn re-reads the plan + patterns from scratch. Spawning is the expensive path.
+
+- **Inline-first for trivial work.** A slice that's a few mechanical edits (≤~3 small
+  files, no new logic — a config-default flip, a one-line threading, a barrel export)
+  is cheaper done directly by the orchestrator than delegated. Do NOT spawn an
+  implementer for it. (Real cost seen: a 2-line × 3-file flip cost ~71k tokens as a
+  spawned implementer.)
+- **Research fan-out budget = 1 by default.** Spawn a 2nd Explore/researcher only when
+  scope spans unfamiliar, disjoint areas; 3 is the ceiling and rarely justified —
+  overlapping explorers re-derive the same facts and each returns a large report.
+- **Don't double-plan.** If exploration already produced a concrete, file-level
+  blueprint, write the plan from it directly and skip the `planner` agent. Use `planner`
+  only when the design is genuinely non-trivial or contested.
+- **One verification pass.** `architecture-reviewer` and `plan-verifier` each re-read the
+  whole diff. Run the one that matches the risk; run both only for large/structural
+  changes.
+- **Fewer, fatter agents** beat many thin ones. Batch a slice's whole job into one
+  implementer; don't split a feature into more slices than file-ownership requires.
+- **Decide artifact locations up front** (plan path, branch) — re-deciding mid-flight
+  costs extra orchestration turns on a growing context.
+
+---
+
 ## Conventions for adding/editing agents
 
 - **Body in English**; the agent replies in the language of the request (matches
