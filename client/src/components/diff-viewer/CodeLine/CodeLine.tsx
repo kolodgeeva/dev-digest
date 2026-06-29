@@ -5,7 +5,7 @@
 import React from "react";
 import { commentTargetFor, type CommentThread, type DiffCommentApi, cs } from "../comments";
 import { type Line } from "../helpers";
-import { s, lineRowFor, lineSignFor } from "../styles";
+import { s, lineRowFor, lineSignFor, findingLineMark } from "../styles";
 import { CommentThreadView } from "../CommentThreadView";
 import { InlineComposer } from "../InlineComposer";
 
@@ -14,11 +14,17 @@ export function CodeLine({
   path,
   threads,
   commenting,
+  anchorId,
+  highlight,
 }: {
   ln: Line;
   path: string;
   threads: CommentThread[];
   commenting?: DiffCommentApi;
+  /** DOM id for this row when it's a finding line — the badge scroll target. */
+  anchorId?: string;
+  /** Mark this row as flagged by the latest review. */
+  highlight?: boolean;
 }) {
   const [hover, setHover] = React.useState(false);
   const [composing, setComposing] = React.useState(false);
@@ -37,11 +43,12 @@ export function CodeLine({
 
   return (
     <div
+      id={anchorId}
       style={cs.rowWrap}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div style={lineRowFor(ln.kind)}>
+      <div style={{ ...lineRowFor(ln.kind), ...(highlight ? findingLineMark : null) }}>
         <span className="mono tnum" style={{ ...s.lineNo, position: "relative" }}>
           {showAdd && target && (
             <button
