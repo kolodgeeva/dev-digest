@@ -54,6 +54,11 @@ proceed without answers, state the assumptions you made and lower confidence.
   inside the project repository — NOT the global `~/.claude/plans/`. Use an absolute path
   under the repo root (from `git rev-parse --show-toplevel`) so the plan always lands in the
   project and is committable alongside the code.
+- **The plan ALWAYS ends up in the repo's `.claude/plans/`.** Even if you were invoked under
+  plan mode (or asked to "return the plan instead of writing it"), the finished plan must
+  still be persisted to `<repo-root>/.claude/plans/<feature-slug>.md` — return its content to
+  the caller AND ensure that repo path is written. Never let the only copy live in
+  `~/.claude/plans/`.
 - **Bash is read-only inspection only**: `rg`, `grep`, `find`, `ls`, `cat`, `git log`,
   `git show`, `git blame`. No state-mutating commands.
 - Respect do-not-touch paths: `server/src/db/migrations/**` (regenerate via

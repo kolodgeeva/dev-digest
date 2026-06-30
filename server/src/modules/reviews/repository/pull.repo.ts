@@ -26,6 +26,43 @@ export async function getRepo(
   return row;
 }
 
+/**
+ * Resolve a repo id from its `owner/name` full name (workspace-scoped). Mirrors
+ * `repos/repository.ts#findByFullName`, but lives here so the MCP server can
+ * resolve refs through the reviews module without cross-module DB coupling.
+ */
+export async function findRepoByFullName(
+  db: Db,
+  workspaceId: string,
+  fullName: string,
+): Promise<{ id: string } | undefined> {
+  const [row] = await db
+    .select({ id: t.repos.id })
+    .from(t.repos)
+    .where(and(eq(t.repos.workspaceId, workspaceId), eq(t.repos.fullName, fullName)));
+  return row;
+}
+
+/** Resolve a PR id from a repo id + PR number (workspace-scoped). */
+export async function findPullByRepoAndNumber(
+  db: Db,
+  workspaceId: string,
+  repoId: string,
+  number: number,
+): Promise<{ prId: string } | undefined> {
+  const [row] = await db
+    .select({ id: t.pullRequests.id })
+    .from(t.pullRequests)
+    .where(
+      and(
+        eq(t.pullRequests.workspaceId, workspaceId),
+        eq(t.pullRequests.repoId, repoId),
+        eq(t.pullRequests.number, number),
+      ),
+    );
+  return row ? { prId: row.id } : undefined;
+}
+
 export async function getPrFiles(
   db: Db,
   prId: string,

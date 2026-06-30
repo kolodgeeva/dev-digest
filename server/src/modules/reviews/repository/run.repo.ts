@@ -111,6 +111,20 @@ export async function reapStaleRunningRuns(db: Db): Promise<number> {
   return rows.length;
 }
 
+/** A run's status/error + the PR it ran on, by id (workspace-scoped). The MCP
+ *  `get_findings` / `run_agent_on_pr` tools use this to report run state. */
+export async function getRunById(
+  db: Db,
+  workspaceId: string,
+  runId: string,
+): Promise<{ status: string | null; error: string | null; prId: string | null } | undefined> {
+  const [row] = await db
+    .select({ status: t.agentRuns.status, error: t.agentRuns.error, prId: t.agentRuns.prId })
+    .from(t.agentRuns)
+    .where(and(eq(t.agentRuns.workspaceId, workspaceId), eq(t.agentRuns.id, runId)));
+  return row;
+}
+
 // ---- observability: agent_runs + run_traces -------------------------------
 
 /** Create an agent_runs row in `running` state; returns its id (= the runId). */

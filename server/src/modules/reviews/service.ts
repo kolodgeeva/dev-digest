@@ -3,10 +3,10 @@ import type { FindingActionKind, RunEventKind, RunTrace } from '@devdigest/share
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
-import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
+import { type ReviewDto, type ReviewDtoFinding, type RunOutcomeDto } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl } from './findings.js';
-import { reviewToDto } from './helpers.js';
+import { reviewToDto, toRunOutcomeDto } from './helpers.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -59,6 +59,38 @@ export class ReviewService {
   /** Delete a whole review run (one agent's pass) + its findings (cascade). */
   async deleteReview(workspaceId: string, reviewId: string): Promise<boolean> {
     return this.repo.deleteReview(workspaceId, reviewId);
+  }
+
+  // ===========================================================================
+  // Ref resolution + concise run outcome — consumed by the MCP server, which
+  // speaks in `owner/name` + PR number + run_id rather than internal ids.
+  // ===========================================================================
+
+  /** Resolve an internal repo id from its `owner/name` full name. */
+  async resolveRepoId(workspaceId: string, repoFullName: string): Promise<string> {
+    const repo = await this.repo.findRepoByFullName(workspaceId, repoFullName);
+    if (!repo) throw new NotFoundError(`Repo "${repoFullName}" not imported`);
+    return repo.id;
+  }
+
+  /** Resolve `{ prId, repoId }` from a repo full name + PR number. */
+  async resolvePullRef(
+    workspaceId: string,
+    repoFullName: string,
+    prNumber: number,
+  ): Promise<{ prId: string; repoId: string }> {
+    const repoId = await this.resolveRepoId(workspaceId, repoFullName);
+    const pull = await this.repo.findPullByRepoAndNumber(workspaceId, repoId, prNumber);
+    if (!pull) throw new NotFoundError(`PR #${prNumber} not found in "${repoFullName}"`);
+    return { prId: pull.prId, repoId };
+  }
+
+  /** Concise outcome of one run by id (verdict + findings); undefined if unknown. */
+  async runOutcome(workspaceId: string, runId: string): Promise<RunOutcomeDto | undefined> {
+    const run = await this.repo.getRunById(workspaceId, runId);
+    if (!run) return undefined;
+    const reviewData = await this.repo.reviewForRun(runId);
+    return toRunOutcomeDto(runId, run, reviewData?.review, reviewData?.findings ?? []);
   }
 
   /** In-flight runs for a PR (server-side source of truth, survives reload). */

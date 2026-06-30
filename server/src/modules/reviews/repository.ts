@@ -35,6 +35,20 @@ export class ReviewRepository {
     return pullRepo.getRepo(this.db, repoId);
   }
 
+  /** Resolve a repo id from `owner/name` (workspace-scoped) — for MCP refs. */
+  findRepoByFullName(workspaceId: string, fullName: string): Promise<{ id: string } | undefined> {
+    return pullRepo.findRepoByFullName(this.db, workspaceId, fullName);
+  }
+
+  /** Resolve a PR id from repo id + PR number (workspace-scoped) — for MCP refs. */
+  findPullByRepoAndNumber(
+    workspaceId: string,
+    repoId: string,
+    number: number,
+  ): Promise<{ prId: string } | undefined> {
+    return pullRepo.findPullByRepoAndNumber(this.db, workspaceId, repoId, number);
+  }
+
   getPrFiles(prId: string): Promise<(typeof t.prFiles.$inferSelect)[]> {
     return pullRepo.getPrFiles(this.db, prId);
   }
@@ -66,6 +80,19 @@ export class ReviewRepository {
 
   getReview(reviewId: string): Promise<ReviewRow | undefined> {
     return reviewRepo.getReview(this.db, reviewId);
+  }
+
+  /** The review (with findings) a given run produced; undefined if none yet. */
+  reviewForRun(runId: string): Promise<{ review: ReviewRow; findings: FindingRow[] } | undefined> {
+    return reviewRepo.reviewForRun(this.db, runId);
+  }
+
+  /** A run's status/error + its PR id, by id (workspace-scoped). */
+  getRunById(
+    workspaceId: string,
+    runId: string,
+  ): Promise<{ status: string | null; error: string | null; prId: string | null } | undefined> {
+    return runRepo.getRunById(this.db, workspaceId, runId);
   }
 
   /** In-flight runs for a PR (status='running') — the server-side source of

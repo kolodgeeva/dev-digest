@@ -52,6 +52,39 @@ export function findingRowToDto(row: FindingRow): ReviewDtoFinding {
   };
 }
 
+/**
+ * Concise outcome of a single agent run — what the MCP `run_agent_on_pr` /
+ * `get_findings` tools return. The verdict/score/summary come from the run's
+ * review (undefined while the run is still in flight or if it failed before
+ * persisting one); `status`/`error` come from the run row itself.
+ */
+export interface RunOutcomeDto {
+  run_id: string;
+  status: string | null;
+  error: string | null;
+  verdict: string | null;
+  score: number | null;
+  summary: string | null;
+  findings: ReviewDtoFinding[];
+}
+
+export function toRunOutcomeDto(
+  runId: string,
+  run: { status: string | null; error: string | null },
+  review: ReviewRow | undefined,
+  findings: FindingRow[],
+): RunOutcomeDto {
+  return {
+    run_id: runId,
+    status: run.status,
+    error: run.error,
+    verdict: review?.verdict ?? null,
+    score: review?.score ?? null,
+    summary: review?.summary ?? null,
+    findings: findings.map(findingRowToDto),
+  };
+}
+
 export function reviewToDto(
   review: ReviewRow,
   findings: FindingRow[],

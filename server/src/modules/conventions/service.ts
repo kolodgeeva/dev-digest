@@ -1,6 +1,6 @@
 import type { Container } from '../../platform/container.js';
 import type { ConventionCandidate, Skill, SkillType } from '@devdigest/shared';
-import { ValidationError } from '../../platform/errors.js';
+import { ValidationError, NotFoundError } from '../../platform/errors.js';
 import { resolveAvailableLlm } from '../settings/feature-models.js';
 import { toSkillDto } from '../skills/helpers.js';
 import { ConventionsRepository } from './repository.js';
@@ -54,6 +54,19 @@ export class ConventionsService {
   async list(workspaceId: string, repoId: string): Promise<ConventionCandidate[]> {
     const rows = await this.repo.listByRepo(workspaceId, repoId);
     return rows.map(toConventionDto);
+  }
+
+  /**
+   * List a repo's conventions by `owner/name` full name (the MCP get_conventions
+   * tool speaks by name). Throws NotFoundError with actionable text if unknown.
+   */
+  async listByRepoFullName(
+    workspaceId: string,
+    repoFullName: string,
+  ): Promise<ConventionCandidate[]> {
+    const repoId = await this.repo.findRepoIdByFullName(workspaceId, repoFullName);
+    if (!repoId) throw new NotFoundError(`Repo "${repoFullName}" not imported`);
+    return this.list(workspaceId, repoId);
   }
 
   /**
