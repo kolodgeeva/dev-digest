@@ -1,58 +1,27 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { z } from 'zod';
 import { RunRequest } from '@devdigest/shared';
 import type { RunEvent } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { NotFoundError } from '../../platform/errors.js';
-import type { RunBus } from '../../platform/sse.js';
 import { ReviewService } from './service.js';
 
 /**
  * reviews module.
  *   POST   /pulls/:id/review  {agentId} | {all:true}  → run review(s); returns runs
- *   POST   /reviews/run-sync  {repo,pr,agent}          → create→wait→collect; one MCP-friendly call
  *   GET    /runs/:id/events                            → SSE stream of RunEvent (replay-first)
  *   GET    /runs/:id/trace                             → the single-document RunTrace
  *   GET    /runs/:id/outcome                           → concise RunOutcomeDto (verdict + findings)
  *   GET    /pulls/:id/reviews                          → persisted reviews + findings for a PR
  *   POST   /findings/:id/(accept|dismiss)              → finding actions
+ *
+ * These are general-purpose, id-keyed endpoints. External callers (the MCP
+ * server) orchestrate them — resolve owner/name + PR number to ids, POST a
+ * review, then poll /runs/:id/outcome — rather than the API exposing a
+ * bespoke MCP aggregate.
  */
 const FINDING_ACTIONS = ['accept', 'dismiss'] as const;
-
-/** `/reviews/run-sync` body — the MCP write tool speaks owner/name + PR number. */
-const RunSyncBody = z.object({
-  repo: z.string().min(1),
-  pr: z.number().int().positive(),
-  agent: z.string().min(1),
-});
-
-/**
- * Max time `/reviews/run-sync` blocks on `runBus.onDone` before falling back to
- * `{ status:'running', run_id }`. The synchronous wait lives here (not in the
- * MCP process) because the in-memory `runBus` only exists in the API process.
- */
-const RUN_SYNC_TIMEOUT_MS = (() => {
-  const n = Number(process.env.MCP_RUN_TIMEOUT_MS);
-  return Number.isFinite(n) && n > 0 ? n : 120_000;
-})();
-
-/** Resolve when the run completes, or `true` if `timeoutMs` elapses first. */
-function waitForDone(runBus: RunBus, runId: string, timeoutMs: number): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    let settled = false;
-    const finish = (timedOut: boolean) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      off();
-      resolve(timedOut);
-    };
-    const timer = setTimeout(() => finish(true), timeoutMs);
-    const off = runBus.onDone(runId, () => finish(false));
-  });
-}
 
 export default async function reviewsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
@@ -80,44 +49,6 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     );
     return { pr_id: req.params.id, runs, reviews };
   });
-
-  // ---- Synchronous review (MCP) — create → wait → collect in one call ------
-  // The MCP `run_agent_on_pr` tool maps 1:1 to this: resolve owner/name + PR
-  // number → run a single agent → block on the in-process runBus until done
-  // (capped) → return the concise outcome. Same fan-out cost as the manual
-  // trigger, so the same tight rate limit applies.
-  app.post(
-    '/reviews/run-sync',
-    { schema: { body: RunSyncBody }, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
-    async (req) => {
-      const { workspaceId } = await getContext(container, req);
-      const { repo, pr, agent } = req.body;
-
-      // Resolve agent + PR with actionable 404s — the MCP client passes the
-      // message straight through to the AI tool-caller (errors lead onward).
-      const targets = await service.resolveTargets(workspaceId, { agentId: agent }).catch(() => {
-        throw new NotFoundError(
-          `agent "${agent}" not found — call list_agents to get a valid agent id`,
-        );
-      });
-      const { prId } = await service.resolvePullRef(workspaceId, repo, pr).catch(() => {
-        throw new NotFoundError(
-          `repo "${repo}" PR #${pr} isn't imported yet — add the repo and sync its PRs in the studio first`,
-        );
-      });
-
-      const { runs } = await service.runReview(workspaceId, prId, targets, req.log);
-      const runId = runs[0]?.run_id;
-      if (!runId) throw new NotFoundError('Failed to start a review run');
-
-      const timedOut = await waitForDone(container.runBus, runId, RUN_SYNC_TIMEOUT_MS);
-      if (timedOut) return { status: 'running' as const, run_id: runId };
-
-      const outcome = await service.runOutcome(workspaceId, runId);
-      if (!outcome) throw new NotFoundError(`Run ${runId} produced no outcome`);
-      return outcome;
-    },
-  );
 
   // ---- SSE: live run events (replay buffer first, then live; ends on done) -
   // No rate limit: SSE is one long-lived connection, not burst traffic.

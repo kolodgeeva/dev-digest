@@ -7,9 +7,6 @@ import { IdParams } from '../_shared/schemas.js';
 import { NotFoundError } from '../../platform/errors.js';
 import { ConventionsService } from './service.js';
 
-/** `/conventions?repo=owner/name` — the MCP get_conventions tool speaks by name. */
-const ByRepoQuery = z.object({ repo: z.string().min(1) });
-
 /**
  * Conventions module — extract a repo's house-rules, triage them, and merge the
  * accepted ones into a Skill.
@@ -41,15 +38,6 @@ const CreateConventionSkillBody = z.object({
 export default async function conventionsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const service = new ConventionsService(app.container);
-
-  // ---- List conventions by repo full name (MCP get_conventions) -----------
-  // Name-keyed twin of `GET /repos/:id/conventions`; resolves owner/name → id.
-  app.get('/conventions', { schema: { querystring: ByRepoQuery } }, async (req) => {
-    const { workspaceId } = await getContext(app.container, req);
-    // Throws NotFoundError (→ 404) with actionable text for an unknown repo.
-    const conventions = await service.listByRepoFullName(workspaceId, req.query.repo);
-    return { repo: req.query.repo, conventions };
-  });
 
   app.post('/repos/:id/conventions/extract', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);

@@ -1,10 +1,11 @@
 import type { Agent, ConventionCandidate } from '@devdigest/shared';
 
 /**
- * The narrow surface the tools depend on. Under R8 this is backed by an HTTP
- * client (`http-client.ts`) that talks to the running DevDigest API; unit tests
- * pass plain-object fakes. Each method maps 1:1 to one API endpoint — the tools
- * stay agnostic to the transport.
+ * The narrow surface the tools depend on. Backed by an HTTP client
+ * (`http-client.ts`) that talks to the running DevDigest API; unit tests pass
+ * plain-object fakes. The tools stay agnostic to the transport — the client's
+ * implementation does any multi-step orchestration over the API's
+ * general-purpose, id-keyed endpoints (there is no MCP-specific aggregate).
  *
  * No `@server/*` imports: the MCP process holds no DB, Container, or keys. The
  * only borrowed types are `@devdigest/shared` contracts (`Agent`,
@@ -12,8 +13,8 @@ import type { Agent, ConventionCandidate } from '@devdigest/shared';
  */
 
 /**
- * The envelope returned by `GET /blast?repo=owner/name&pr=N` — a PR's blast
- * radius built from the repo-intel index (no LLM).
+ * A PR's blast radius built from the repo-intel index (no LLM) — the shape the
+ * client reads from `GET /pulls/:id/blast`.
  */
 export interface BlastResponse {
   changed_symbols: { name: string; file: string; kind: string }[];
@@ -51,27 +52,31 @@ export interface RunOutcome {
 }
 
 /**
- * Result of the synchronous `POST /reviews/run-sync`: either the finished
- * outcome, or — if the review outlived the server-side wait — a `run_id` to
- * fetch later with `get_findings`.
+ * Result of `runAgentOnPr`: either the finished outcome, or — if the review
+ * outlived the client's poll deadline — a `run_id` to fetch later with
+ * `get_findings`.
  */
 export type RunSyncResult =
   | { kind: 'outcome'; outcome: RunOutcome }
   | { kind: 'running'; run_id: string };
 
 export interface ToolDeps {
-  /** `GET /agents` — all reviewer agents in the local workspace. */
+  /** All reviewer agents in the local workspace (`GET /agents`). */
   listAgents(): Promise<Agent[]>;
 
-  /** `POST /reviews/run-sync` — create → wait → collect, server-side, in one call. */
+  /**
+   * Run one agent on a PR and wait for the outcome. The client orchestrates it:
+   * resolve owner/name + PR number → ids, `POST /pulls/:id/review`, then poll
+   * `GET /runs/:id/outcome` until terminal (or return `{ kind: 'running' }`).
+   */
   runAgentOnPr(input: { repo: string; pr: number; agent: string }): Promise<RunSyncResult>;
 
-  /** `GET /runs/:id/outcome` — concise outcome by run id; `undefined` if unknown. */
+  /** Concise outcome by run id (`GET /runs/:id/outcome`); `undefined` if unknown. */
   getOutcome(runId: string): Promise<RunOutcome | undefined>;
 
-  /** `GET /conventions?repo=owner/name` — the repo's vetted conventions. */
+  /** The repo's vetted conventions (resolve the repo id → `GET /repos/:id/conventions`). */
   getConventions(repo: string): Promise<ConventionCandidate[]>;
 
-  /** `GET /blast?repo=owner/name&pr=N` — a PR's blast radius from the repo-intel index. */
+  /** A PR's blast radius (resolve the PR id → `GET /pulls/:id/blast`). */
   getBlastRadius(input: { repo: string; pr: number }): Promise<BlastResponse>;
 }

@@ -35,19 +35,6 @@ export class ReviewRepository {
     return pullRepo.getRepo(this.db, repoId);
   }
 
-  /** Resolve a repo id from `owner/name` (workspace-scoped) — for MCP refs. */
-  findRepoByFullName(workspaceId: string, fullName: string): Promise<{ id: string } | undefined> {
-    return pullRepo.findRepoByFullName(this.db, workspaceId, fullName);
-  }
-
-  /** Resolve a PR id from repo id + PR number (workspace-scoped) — for MCP refs. */
-  findPullByRepoAndNumber(
-    workspaceId: string,
-    repoId: string,
-    number: number,
-  ): Promise<{ prId: string } | undefined> {
-    return pullRepo.findPullByRepoAndNumber(this.db, workspaceId, repoId, number);
-  }
 
   getPrFiles(prId: string): Promise<(typeof t.prFiles.$inferSelect)[]> {
     return pullRepo.getPrFiles(this.db, prId);

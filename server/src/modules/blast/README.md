@@ -15,11 +15,12 @@ is read from the `repo-intel` index already built at clone time. The service has
 
 | Route | Caller | Resolves by |
 |---|---|---|
-| `GET /pulls/:id/blast` | the web UI (Overview panel) | internal PR id |
-| `GET /blast?repo=owner/name&pr=N` | the MCP `devdigest_get_blast_radius` tool / external | repo full name + PR number |
+| `GET /pulls/:id/blast` | the web UI (Overview panel) **and** the MCP `devdigest_get_blast_radius` tool | internal PR id |
 
-Both return the same envelope and are workspace-scoped via `getContext` (tenancy gate is
-`getPull` / `findRepoByFullName`). Unknown PR/repo → `404 NotFoundError` with actionable text.
+One general-purpose, id-keyed endpoint — workspace-scoped via `getContext` (tenancy gate is
+`getPull`). The MCP tool resolves `owner/name` + PR number to a PR id itself (via `GET /repos` +
+`GET /repos/:id/pulls`) and then calls this route; the API exposes no MCP-specific aggregate.
+Unknown PR → `404 NotFoundError` with actionable text.
 
 ## Response envelope
 
@@ -59,8 +60,8 @@ stay untouched (same pattern as `intent`):
 
 ## Files
 
-- `routes.ts` — the two GET routes + inline `BlastResponseSchema`.
-- `service.ts` — `BlastService.build(workspaceId, prId)` and `buildByRef(workspaceId, repo, pr)`.
+- `routes.ts` — the `GET /pulls/:id/blast` route + inline `BlastResponseSchema`.
+- `service.ts` — `BlastService.build(workspaceId, prId)`.
 - `helpers.ts` — `toBlastResponse(result)` (pure) + the `BlastResponse` type.
 - `helpers.test.ts` — hermetic mapper tests. `../../test/blast.it.test.ts` — DB-backed route tests
   (inject a fake `repoIntel` + offline `secrets` to prove zero LLM calls).

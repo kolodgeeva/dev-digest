@@ -62,28 +62,9 @@ export class ReviewService {
   }
 
   // ===========================================================================
-  // Ref resolution + concise run outcome — consumed by the MCP server, which
-  // speaks in `owner/name` + PR number + run_id rather than internal ids.
+  // Concise run outcome — consumed via GET /runs/:id/outcome (the MCP server
+  // polls it after starting a run through POST /pulls/:id/review).
   // ===========================================================================
-
-  /** Resolve an internal repo id from its `owner/name` full name. */
-  async resolveRepoId(workspaceId: string, repoFullName: string): Promise<string> {
-    const repo = await this.repo.findRepoByFullName(workspaceId, repoFullName);
-    if (!repo) throw new NotFoundError(`Repo "${repoFullName}" not imported`);
-    return repo.id;
-  }
-
-  /** Resolve `{ prId, repoId }` from a repo full name + PR number. */
-  async resolvePullRef(
-    workspaceId: string,
-    repoFullName: string,
-    prNumber: number,
-  ): Promise<{ prId: string; repoId: string }> {
-    const repoId = await this.resolveRepoId(workspaceId, repoFullName);
-    const pull = await this.repo.findPullByRepoAndNumber(workspaceId, repoId, prNumber);
-    if (!pull) throw new NotFoundError(`PR #${prNumber} not found in "${repoFullName}"`);
-    return { prId: pull.prId, repoId };
-  }
 
   /** Concise outcome of one run by id (verdict + findings); undefined if unknown. */
   async runOutcome(workspaceId: string, runId: string): Promise<RunOutcomeDto | undefined> {

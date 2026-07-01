@@ -1,6 +1,6 @@
 /**
- * GET /pulls/:id/blast and GET /blast — blast radius mapped from the repo-intel
- * engine, served deterministically with ZERO LLM calls.
+ * GET /pulls/:id/blast — blast radius mapped from the repo-intel engine, served
+ * deterministically with ZERO LLM calls.
  *
  * Gated on Docker (needs Postgres).
  */
@@ -183,60 +183,3 @@ d('GET /pulls/:id/blast (Testcontainers pg)', () => {
   });
 });
 
-d('GET /blast?repo=&pr= (by ref)', () => {
-  let pg: PgFixture;
-  let workspaceId: string;
-
-  beforeAll(async () => {
-    pg = await startPg();
-    await seed(pg.handle.db);
-    const [ws] = await pg.handle.db.select().from(t.workspaces);
-    workspaceId = ws!.id;
-  });
-  afterAll(async () => {
-    await pg?.stop();
-  });
-
-  async function fetchBlastByRef(repo: string, pr: number, fixtureResult = BLAST_FIXTURE) {
-    const gh = new MockGitHubClient({ pulls: [] });
-    const llm = new MockLLMProvider('openai');
-    const app = await buildApp({
-      config: config(),
-      db: pg.handle.db,
-      overrides: {
-        github: gh,
-        llm: { openai: llm, anthropic: new MockLLMProvider('anthropic') },
-        secrets: { get: async () => undefined },
-        repoIntel: makeRepoIntelStub(fixtureResult),
-      },
-    });
-    const url = `/blast?repo=${encodeURIComponent(repo)}&pr=${pr}`;
-    const res = await app.inject({ method: 'GET', url });
-    return { res, body: res.json() as BlastResponse };
-  }
-
-  it('returns the same shape as the by-id route', async () => {
-    const repo = await setupRepo(pg.handle.db, workspaceId);
-    const pr = await addPr(pg.handle.db, workspaceId, repo.id, 10);
-    await addFiles(pg.handle.db, pr.id, ['src/auth/verifyToken.ts']);
-
-    const { res, body } = await fetchBlastByRef(repo.fullName, 10);
-    expect(res.statusCode).toBe(200);
-    expect(body.changed_symbols).toBeDefined();
-    expect(Array.isArray(body.downstream)).toBe(true);
-    expect(typeof body.summary).toBe('string');
-    expect(typeof body.degraded).toBe('boolean');
-  });
-
-  it('returns 404 for an unknown repo', async () => {
-    const { res } = await fetchBlastByRef('nobody/nonexistent-repo', 1);
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('returns 404 for an unknown PR number', async () => {
-    const repo = await setupRepo(pg.handle.db, workspaceId);
-    // Do NOT add a PR with number 9999
-    const { res } = await fetchBlastByRef(repo.fullName, 9999);
-    expect(res.statusCode).toBe(404);
-  });
-});

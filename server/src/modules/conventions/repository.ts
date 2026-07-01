@@ -110,15 +110,6 @@ export class ConventionsRepository {
     return row;
   }
 
-  /** Resolve an internal repo id from its `owner/name` full name (workspace-scoped). */
-  async findRepoIdByFullName(workspaceId: string, fullName: string): Promise<string | undefined> {
-    const [row] = await this.db
-      .select({ id: t.repos.id })
-      .from(t.repos)
-      .where(and(eq(t.repos.workspaceId, workspaceId), eq(t.repos.fullName, fullName)));
-    return row?.id;
-  }
-
   /** The repo's short display name (for skill naming), or undefined if missing. */
   async repoName(repoId: string): Promise<string | undefined> {
     const [row] = await this.db

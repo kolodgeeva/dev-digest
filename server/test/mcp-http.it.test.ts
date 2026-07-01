@@ -6,9 +6,6 @@ import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
 import * as t from '../src/db/schema.js';
-import { Container } from '../src/platform/container.js';
-import { ReviewService } from '../src/modules/reviews/service.js';
-import { NotFoundError } from '../src/platform/errors.js';
 
 const hasDocker = await dockerAvailable();
 const d = hasDocker ? describe : describe.skip;
@@ -19,21 +16,17 @@ if (!hasDocker) {
 }
 
 /**
- * The HTTP surface the MCP server (R8) consumes, plus the service seams beneath
- * it. The 3 new routes are exercised with `app.inject` against a real Postgres;
- * the seams are also called directly. No LLM, no network — the read paths build
- * no provider and the secrets stub guarantees it.
+ * `GET /runs/:id/outcome` — the concise run outcome the MCP server polls after
+ * starting a review through `POST /pulls/:id/review`. The MCP no longer has any
+ * bespoke aggregate endpoint; it orchestrates general-purpose, id-keyed routes.
+ * No LLM, no network — the read path builds no provider and the secrets stub
+ * guarantees it.
  */
-d('mcp http surface', () => {
+d('run outcome (polled by the MCP server)', () => {
   let pg: PgFixture;
   let app: FastifyInstance;
-  let svc: ReviewService;
   let workspaceId: string;
-  let repoFullName: string;
-  let repoId: string;
-  let prNumber: number;
   let prId: string;
-  let agentId: string;
 
   beforeAll(async () => {
     pg = await startPg();
@@ -44,8 +37,6 @@ d('mcp http surface', () => {
       db: pg.handle.db,
       overrides: { secrets: { get: async () => undefined } },
     });
-    const container = new Container(config, pg.handle.db, { secrets: { get: async () => undefined } });
-    svc = new ReviewService(container);
 
     const [ws] = await pg.handle.db.select().from(t.workspaces);
     workspaceId = ws!.id;
@@ -53,43 +44,16 @@ d('mcp http surface', () => {
       .select()
       .from(t.repos)
       .where(eq(t.repos.workspaceId, workspaceId));
-    repoFullName = repo!.fullName;
-    repoId = repo!.id;
     const [pull] = await pg.handle.db
       .select()
       .from(t.pullRequests)
       .where(eq(t.pullRequests.repoId, repo!.id));
-    prNumber = pull!.number;
     prId = pull!.id;
-    const [agent] = await pg.handle.db
-      .select()
-      .from(t.agents)
-      .where(eq(t.agents.workspaceId, workspaceId));
-    agentId = agent!.id;
   });
   afterAll(async () => {
     await app?.close();
     await pg?.stop();
   });
-
-  // ---- service seams (no HTTP) --------------------------------------------
-
-  it('resolveRepoId resolves a known repo and rejects an unknown one', async () => {
-    await expect(svc.resolveRepoId(workspaceId, repoFullName)).resolves.toEqual(expect.any(String));
-    await expect(svc.resolveRepoId(workspaceId, 'ghost/missing')).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
-  });
-
-  it('resolvePullRef resolves a known PR and rejects an unknown number', async () => {
-    const ref = await svc.resolvePullRef(workspaceId, repoFullName, prNumber);
-    expect(ref).toEqual({ prId, repoId: expect.any(String) });
-    await expect(svc.resolvePullRef(workspaceId, repoFullName, 999999)).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
-  });
-
-  // ---- GET /runs/:id/outcome ----------------------------------------------
 
   it('GET /runs/:id/outcome returns the concise verdict + findings of a completed run', async () => {
     // Seed a completed run + its review + one finding directly (no executor).
@@ -152,57 +116,5 @@ d('mcp http surface', () => {
     });
     expect(res.statusCode).toBe(404);
     expect(res.json().error.message).toMatch(/run_agent_on_pr/);
-  });
-
-  // ---- GET /conventions?repo= ---------------------------------------------
-
-  it('GET /conventions?repo= returns the repo conventions by full name', async () => {
-    await pg.handle.db.insert(t.conventions).values({
-      workspaceId,
-      repoId,
-      rule: 'Use parameterized queries',
-      evidencePath: 'src/db.ts',
-      evidenceSnippet: 'db.query(sql`...`)',
-      confidence: 0.9,
-      accepted: true,
-    });
-
-    const res = await app.inject({
-      method: 'GET',
-      url: `/conventions?repo=${encodeURIComponent(repoFullName)}`,
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.repo).toBe(repoFullName);
-    expect(body.conventions.length).toBeGreaterThanOrEqual(1);
-    expect(body.conventions[0]).toMatchObject({ rule: expect.any(String) });
-  });
-
-  it('GET /conventions?repo= 404s for an unimported repo', async () => {
-    const res = await app.inject({ method: 'GET', url: '/conventions?repo=ghost/missing' });
-    expect(res.statusCode).toBe(404);
-    expect(res.json().error.message).toMatch(/not imported/);
-  });
-
-  // ---- POST /reviews/run-sync (error paths lead onward) -------------------
-
-  it('POST /reviews/run-sync 404s with an actionable message for an unknown agent', async () => {
-    const res = await app.inject({
-      method: 'POST',
-      url: '/reviews/run-sync',
-      payload: { repo: repoFullName, pr: prNumber, agent: 'does-not-exist' },
-    });
-    expect(res.statusCode).toBe(404);
-    expect(res.json().error.message).toMatch(/list_agents/);
-  });
-
-  it('POST /reviews/run-sync 404s with an actionable message for an unimported repo', async () => {
-    const res = await app.inject({
-      method: 'POST',
-      url: '/reviews/run-sync',
-      payload: { repo: 'ghost/missing', pr: 1, agent: agentId },
-    });
-    expect(res.statusCode).toBe(404);
-    expect(res.json().error.message).toMatch(/isn.t imported/);
   });
 });

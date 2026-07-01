@@ -20,7 +20,8 @@ export class BlastService {
   /**
    * build — resolve a blast radius by internal PR id.
    *
-   * Used by GET /pulls/:id/blast (internal id from UI).
+   * Used by GET /pulls/:id/blast. External callers (MCP) resolve owner/name +
+   * PR number to a PR id first, then call this id-keyed endpoint.
    */
   async build(workspaceId: string, prId: string): Promise<BlastResponse> {
     const pull = await this.repo.getPull(workspaceId, prId);
@@ -29,27 +30,6 @@ export class BlastService {
     const files = await this.repo.getPrFiles(prId);
     const result = await this.container.repoIntel.getBlastRadius(
       pull.repoId,
-      files.map((f) => f.path),
-    );
-
-    return toBlastResponse(result);
-  }
-
-  /**
-   * buildByRef — resolve a blast radius by repo full name + PR number.
-   *
-   * Used by GET /blast?repo=owner/name&pr=N (MCP / external callers).
-   */
-  async buildByRef(workspaceId: string, repo: string, pr: number): Promise<BlastResponse> {
-    const repoRow = await this.repo.findRepoByFullName(workspaceId, repo);
-    if (!repoRow) throw new NotFoundError(`Repo "${repo}" not imported`);
-
-    const pullRef = await this.repo.findPullByRepoAndNumber(workspaceId, repoRow.id, pr);
-    if (!pullRef) throw new NotFoundError(`PR #${pr} not found in "${repo}"`);
-
-    const files = await this.repo.getPrFiles(pullRef.prId);
-    const result = await this.container.repoIntel.getBlastRadius(
-      repoRow.id,
       files.map((f) => f.path),
     );
 
