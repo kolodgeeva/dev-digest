@@ -3,10 +3,10 @@ import type { FindingActionKind, RunEventKind, RunTrace } from '@devdigest/share
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
-import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
+import { type ReviewDto, type ReviewDtoFinding, type RunOutcomeDto } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl } from './findings.js';
-import { reviewToDto } from './helpers.js';
+import { reviewToDto, toRunOutcomeDto } from './helpers.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -59,6 +59,19 @@ export class ReviewService {
   /** Delete a whole review run (one agent's pass) + its findings (cascade). */
   async deleteReview(workspaceId: string, reviewId: string): Promise<boolean> {
     return this.repo.deleteReview(workspaceId, reviewId);
+  }
+
+  // ===========================================================================
+  // Concise run outcome — consumed via GET /runs/:id/outcome (the MCP server
+  // polls it after starting a run through POST /pulls/:id/review).
+  // ===========================================================================
+
+  /** Concise outcome of one run by id (verdict + findings); undefined if unknown. */
+  async runOutcome(workspaceId: string, runId: string): Promise<RunOutcomeDto | undefined> {
+    const run = await this.repo.getRunById(workspaceId, runId);
+    if (!run) return undefined;
+    const reviewData = await this.repo.reviewForRun(runId);
+    return toRunOutcomeDto(runId, run, reviewData?.review, reviewData?.findings ?? []);
   }
 
   /** In-flight runs for a PR (server-side source of truth, survives reload). */

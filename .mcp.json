@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "devdigest": {
+      "type": "stdio",
+      "command": "/Users/mariana/IdeaProjects/dev-digest/mcp-server/node_modules/.bin/tsx",
+      "args": [
+        "/Users/mariana/IdeaProjects/dev-digest/mcp-server/src/index.ts"
+      ],
+      "env": {
+        "DEVDIGEST_API_URL": "http://localhost:3001",
+        "TSX_TSCONFIG_PATH": "/Users/mariana/IdeaProjects/dev-digest/mcp-server/tsconfig.json"
+      }
+    }
+  }
+}

@@ -78,6 +78,27 @@ export async function getReview(db: Db, reviewId: string): Promise<ReviewRow | u
   return row;
 }
 
+/**
+ * The review a given agent run produced, with its findings — newest first if a
+ * run ever produced more than one. `reviews.run_id` has no FK, so this is a
+ * plain column match. Returns undefined when the run produced no review yet
+ * (still running, or failed before persisting).
+ */
+export async function reviewForRun(
+  db: Db,
+  runId: string,
+): Promise<{ review: ReviewRow; findings: FindingRow[] } | undefined> {
+  const [review] = await db
+    .select()
+    .from(t.reviews)
+    .where(eq(t.reviews.runId, runId))
+    .orderBy(desc(t.reviews.createdAt))
+    .limit(1);
+  if (!review) return undefined;
+  const findings = await db.select().from(t.findings).where(eq(t.findings.reviewId, review.id));
+  return { review, findings };
+}
+
 /** Delete a whole review (one agent's run) + its findings (cascade), scoped
  *  to the workspace. Returns false if not found in the workspace. */
 export async function deleteReview(

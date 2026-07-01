@@ -35,6 +35,7 @@ export class ReviewRepository {
     return pullRepo.getRepo(this.db, repoId);
   }
 
+
   getPrFiles(prId: string): Promise<(typeof t.prFiles.$inferSelect)[]> {
     return pullRepo.getPrFiles(this.db, prId);
   }
@@ -66,6 +67,19 @@ export class ReviewRepository {
 
   getReview(reviewId: string): Promise<ReviewRow | undefined> {
     return reviewRepo.getReview(this.db, reviewId);
+  }
+
+  /** The review (with findings) a given run produced; undefined if none yet. */
+  reviewForRun(runId: string): Promise<{ review: ReviewRow; findings: FindingRow[] } | undefined> {
+    return reviewRepo.reviewForRun(this.db, runId);
+  }
+
+  /** A run's status/error + its PR id, by id (workspace-scoped). */
+  getRunById(
+    workspaceId: string,
+    runId: string,
+  ): Promise<{ status: string | null; error: string | null; prId: string | null } | undefined> {
+    return runRepo.getRunById(this.db, workspaceId, runId);
   }
 
   /** In-flight runs for a PR (status='running') — the server-side source of

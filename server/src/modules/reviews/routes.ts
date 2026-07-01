@@ -12,10 +12,17 @@ import { ReviewService } from './service.js';
  *   POST   /pulls/:id/review  {agentId} | {all:true}  → run review(s); returns runs
  *   GET    /runs/:id/events                            → SSE stream of RunEvent (replay-first)
  *   GET    /runs/:id/trace                             → the single-document RunTrace
+ *   GET    /runs/:id/outcome                           → concise RunOutcomeDto (verdict + findings)
  *   GET    /pulls/:id/reviews                          → persisted reviews + findings for a PR
  *   POST   /findings/:id/(accept|dismiss)              → finding actions
+ *
+ * These are general-purpose, id-keyed endpoints. External callers (the MCP
+ * server) orchestrate them — resolve owner/name + PR number to ids, POST a
+ * review, then poll /runs/:id/outcome — rather than the API exposing a
+ * bespoke MCP aggregate.
  */
 const FINDING_ACTIONS = ['accept', 'dismiss'] as const;
+
 export default async function reviewsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
@@ -123,6 +130,18 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     const trace = await service.getRunTrace(req.params.id);
     if (!trace) throw new NotFoundError('Run trace not found');
     return trace;
+  });
+
+  // ---- Concise run outcome by run id (MCP get_findings) -------------------
+  app.get('/runs/:id/outcome', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    const outcome = await service.runOutcome(workspaceId, req.params.id);
+    if (!outcome) {
+      throw new NotFoundError(
+        `Run "${req.params.id}" not found — run an agent first with run_agent_on_pr`,
+      );
+    }
+    return outcome;
   });
 
   // ---- Reads --------------------------------------------------------------

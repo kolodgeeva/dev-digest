@@ -34,6 +34,7 @@ server only: `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:generate`
 | `@devdigest/api` | `server/` | Fastify API, features in `server/src/modules/*` |
 | `@devdigest/web` | `client/` | Next.js, routes in `client/src/app/*` |
 | `@devdigest/reviewer-core` | `reviewer-core/` | review engine + grounding gate |
+| `@devdigest/mcp` | `mcp-server/` | local MCP server (stdio) — thin HTTP client of the API (`DEVDIGEST_API_URL`); 5 `devdigest_*` tools |
 | `@devdigest/e2e` | `e2e/` | deterministic browser tests |
 | `@devdigest/shared` | `*/vendor/shared` | Zod contracts (vendored in server **and** client) |
 
