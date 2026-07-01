@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@devdigest/ui";
 import type { PrFile } from "@/lib/types";
 import { AUTO_EXPAND_MAX_LINES } from "../constants";
-import { parsePatch, type Line } from "../helpers";
+import { parsePatch, anchorId, type Line } from "../helpers";
 import {
   buildThreads,
   keysForLine,
@@ -30,11 +30,41 @@ function threadsForLine(ln: Line, matched: Map<string, CommentThread[]>): Commen
   return out;
 }
 
-export function FileCard({ file, commenting }: { file: PrFile; commenting?: DiffCommentApi }) {
+export function FileCard({
+  file,
+  commenting,
+  findingLines,
+}: {
+  file: PrFile;
+  commenting?: DiffCommentApi;
+  /** New-side line numbers the latest review flagged — drives the "N findings"
+   *  badge, the per-line highlight, and the badge's scroll-to-line. */
+  findingLines?: number[];
+}) {
   const t = useTranslations("shell");
+  const findingCount = findingLines?.length ?? 0;
+  const findingSet = React.useMemo(() => new Set(findingLines ?? []), [findingLines]);
   const [open, setOpen] = React.useState(
-    (file.additions ?? 0) + (file.deletions ?? 0) <= AUTO_EXPAND_MAX_LINES
+    findingCount > 0 || (file.additions ?? 0) + (file.deletions ?? 0) <= AUTO_EXPAND_MAX_LINES
   );
+  // Set by the findings badge → after the card opens, scroll its row into view.
+  const [scrollTo, setScrollTo] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (!open || scrollTo == null) return;
+    const id = anchorId(file.path, scrollTo);
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ block: "center", behavior: "smooth" });
+      setScrollTo(null);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open, scrollTo, file.path]);
+
+  const onFindingsClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // don't toggle the card via the header click
+    setOpen(true);
+    if (findingLines && findingLines.length > 0) setScrollTo(findingLines[0]!);
+  };
+
   const lines = React.useMemo(() => parsePatch(file.patch), [file.patch]);
 
   // Group this file's comments into threads, then split into ones we can anchor
@@ -64,6 +94,29 @@ export function FileCard({ file, commenting }: { file: PrFile; commenting?: Diff
           <span style={s.addText}>+{file.additions}</span>{" "}
           <span style={s.delText}>−{file.deletions}</span>
         </span>
+        {findingCount > 0 && (
+          <button
+            type="button"
+            onClick={onFindingsClick}
+            title={t("smartDiff.findings", { count: findingCount })}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              fontWeight: 500,
+              padding: "1px 8px",
+              borderRadius: 999,
+              cursor: "pointer",
+              color: "var(--warn)",
+              background: "var(--warn-bg)",
+              border: "1px solid var(--warn)",
+            }}
+          >
+            <Icon.AlertTriangle size={11} />
+            {t("smartDiff.findings", { count: findingCount })}
+          </button>
+        )}
         {commentCount > 0 && (
           <span
             style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text-muted)" }}
@@ -78,15 +131,20 @@ export function FileCard({ file, commenting }: { file: PrFile; commenting?: Diff
           {lines.length === 0 ? (
             <div style={s.noDiff}>{t("diffViewer.noDiffText")}</div>
           ) : (
-            lines.map((ln, i) => (
-              <CodeLine
-                key={i}
-                ln={ln}
-                path={file.path}
-                threads={threadsForLine(ln, matched)}
-                commenting={commenting}
-              />
-            ))
+            lines.map((ln, i) => {
+              const flagged = ln.newNo != null && findingSet.has(ln.newNo);
+              return (
+                <CodeLine
+                  key={i}
+                  ln={ln}
+                  path={file.path}
+                  threads={threadsForLine(ln, matched)}
+                  commenting={commenting}
+                  highlight={flagged}
+                  anchorId={flagged ? anchorId(file.path, ln.newNo!) : undefined}
+                />
+              );
+            })
           )}
           {commenting && commenting.showComments && <OutdatedComments threads={outdated} />}
         </div>

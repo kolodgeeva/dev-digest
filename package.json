@@ -1,0 +1,8 @@
+{
+  "name": "dev-digest",
+  "private": true,
+  "description": "Root scripts only — DevDigest is NOT a pnpm workspace; each package has its own package.json + lockfile.",
+  "scripts": {
+    "verify:l03": "pnpm -C server typecheck && pnpm -C server exec vitest run smart-diff && pnpm -C client typecheck && pnpm -C client exec vitest run SmartDiffViewer"
+  }
+}

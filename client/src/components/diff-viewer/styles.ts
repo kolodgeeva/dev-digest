@@ -81,6 +81,11 @@ export function lineRowFor(kind: Line["kind"]): CSSProperties {
   return { display: "flex", alignItems: "stretch", fontSize: 13, lineHeight: "20px", background };
 }
 
+/** Left accent marking a line the latest review flagged (the badge scroll target). */
+export const findingLineMark: CSSProperties = {
+  boxShadow: "inset 2px 0 0 0 var(--warn)",
+};
+
 /** Gutter sign colour per line kind. */
 export function lineSignFor(kind: Line["kind"]): CSSProperties {
   return {

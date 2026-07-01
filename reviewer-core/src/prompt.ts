@@ -70,6 +70,13 @@ export interface PromptParts {
   diff: string;
   /** Optional task framing line, e.g. "Review PR #482 '…'". */
   task?: string;
+  /**
+   * Machine-derived PR intent and scope (T0 / intent-detection output). When
+   * present, a scope-discipline instruction plus the intent content (untrusted)
+   * are injected immediately before `## Diff to review`. Absent/undefined →
+   * section omitted (no behavior change), exactly like the other optional sections.
+   */
+  intent?: { summary: string; inScope: string[]; outOfScope: string[] };
 }
 
 export interface AssembledPrompt {
@@ -116,6 +123,25 @@ export function assemblePrompt(parts: PromptParts): AssembledPrompt {
     userSections.push(
       `## Callers of changed symbols\n${wrapUntrusted('callers', parts.callers)}`,
     );
+  }
+  if (parts.intent && parts.intent.summary.trim().length > 0) {
+    const rendered = [
+      parts.intent.summary,
+      '',
+      'In scope:',
+      ...parts.intent.inScope.map((item) => `- ${item}`),
+      '',
+      'Out of scope:',
+      ...parts.intent.outOfScope.map((item) => `- ${item}`),
+    ].join('\n');
+    const scopeRule =
+      '## PR intent (scope discipline)\n' +
+      'The block below is the machine-derived intent and scope of this PR. ' +
+      'Review what is in scope. Do NOT raise findings about matters outside the ' +
+      'stated scope — EXCEPT: if you spot a single serious correctness or security ' +
+      'problem that is out of scope, emit exactly ONE signal finding, never many. ' +
+      'In-scope defects are always reported in full.';
+    userSections.push(`${scopeRule}\n\n${wrapUntrusted('intent', rendered)}`);
   }
   userSections.push(`## Diff to review\n${wrapUntrusted('diff', parts.diff)}`);
 

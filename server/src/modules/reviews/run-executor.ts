@@ -105,6 +105,16 @@ export class ReviewRunExecutor {
     }
     runLog.info(`Diff ready — ${diff.files.length} changed file(s); starting ${jobs.length} agent run(s)`);
 
+    // Load the stored intent ONCE (best-effort — a failure must not block the
+    // review). When absent, the intent section is simply omitted from the prompt.
+    let intent: import('@devdigest/shared').Intent | undefined;
+    try {
+      intent = await this.repo.getIntent(pull.id) ?? undefined;
+      if (intent) runLog.info(`Intent loaded for PR ${pull.id}`);
+    } catch (err) {
+      runLog.info(`intent: load failed (best-effort) — ${(err as Error).message}`);
+    }
+
     for (const { agent, runId } of jobs) {
       const agentStart = Date.now();
       logger?.info(
@@ -112,7 +122,7 @@ export class ReviewRunExecutor {
         `review: agent "${agent.name}" started (${agent.provider}/${agent.model})`,
       );
       try {
-        const outcome = await this.runOneAgent(workspaceId, pull, repo, diff, agent, runId, runLog);
+        const outcome = await this.runOneAgent(workspaceId, pull, repo, diff, intent, agent, runId, runLog);
         logger?.info(
           {
             runId,
@@ -141,6 +151,7 @@ export class ReviewRunExecutor {
     pull: PullRow,
     repo: typeof schema.repos.$inferSelect,
     diff: UnifiedDiff,
+    intent: import('@devdigest/shared').Intent | undefined,
     agent: AgentRow,
     runId: string,
     parentLog: RunLogger,
@@ -214,6 +225,11 @@ export class ReviewRunExecutor {
         // Linked skills (enabled, ordered; untrusted sources pre-wrapped).
         // Omitted when the agent has none, preserving the prior prompt shape.
         ...(skillBlocks.length ? { skills: skillBlocks } : {}),
+        // Stored intent (pre-classified; best-effort loaded in executeRuns).
+        // Absent when no intent has been computed — the review is never blocked.
+        ...(intent
+          ? { intent: { summary: intent.intent, inScope: intent.in_scope, outOfScope: intent.out_of_scope } }
+          : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),

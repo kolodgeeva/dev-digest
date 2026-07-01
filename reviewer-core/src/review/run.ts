@@ -78,6 +78,12 @@ export interface ReviewInput {
   /** Override the map-reduce line threshold. */
   mapThresholdLines?: number;
   /**
+   * Machine-derived PR intent and scope (passed through to the prompt assembler).
+   * When present, a scope-discipline section is injected before the diff. Absent
+   * → section omitted (no behavior change).
+   */
+  intent?: { summary: string; inScope: string[]; outOfScope: string[] };
+  /**
    * OpenRouter session id — forwarded on every LLM call so all chunks of this
    * review group into one session in the OpenRouter dashboard.
    */
@@ -136,6 +142,7 @@ export async function reviewPullRequest(input: ReviewInput): Promise<ReviewOutco
     repoMap: input.repoMap,
     prDescription: input.prDescription,
     task: input.task,
+    intent: input.intent,
   };
 
   // Whole-diff assembly is the trace default; overwritten below for single-pass.

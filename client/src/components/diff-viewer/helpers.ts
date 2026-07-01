@@ -8,6 +8,12 @@ export interface Line {
   newNo?: number;
 }
 
+/** Stable DOM id for a (file, new-side line) — the scroll target for a finding
+ *  badge. Slugged so arbitrary paths are safe in an `id` attribute. */
+export function anchorId(path: string, line: number): string {
+  return `diffline-${path.replace(/[^\w]+/g, "-")}-${line}`;
+}
+
 /** Parse unified-diff patch text into renderable lines with old/new line numbers. */
 export function parsePatch(patch: string | null | undefined): Line[] {
   if (!patch) return [];

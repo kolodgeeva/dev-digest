@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { SectionLabel, Button } from "@devdigest/ui";
-import { DiffViewer, type DiffCommentApi } from "@/components/diff-viewer";
+import { DiffViewer, SmartDiffViewer, type DiffCommentApi } from "@/components/diff-viewer";
 import { usePrComments, useCreatePrComment } from "@/lib/hooks/reviews";
+import { useSmartDiff } from "@/lib/hooks/smart-diff";
 import { notify } from "@/lib/toast";
 import type { PrFile } from "@devdigest/shared";
 
@@ -16,10 +18,15 @@ interface DiffTabProps {
 }
 
 export function DiffTab({ prId, filesCount, files, canComment }: DiffTabProps) {
+  const t = useTranslations("shell.smartDiff");
   const { data: comments } = usePrComments(prId);
   const create = useCreatePrComment(prId);
+  const { data: smartDiff } = useSmartDiff(prId);
   // Comments start hidden so the diff is clean by default — toggle to reveal.
   const [showComments, setShowComments] = React.useState(false);
+  // Smart (reviewer-ordered) is the default; fall back to it being unavailable.
+  const [smart, setSmart] = React.useState(true);
+  const showSmart = smart && !!smartDiff;
 
   const commentCount = comments?.length ?? 0;
 
@@ -45,21 +52,68 @@ export function DiffTab({ prId, filesCount, files, canComment }: DiffTabProps) {
       <SectionLabel
         icon="Code"
         right={
-          commentCount > 0 ? (
-            <Button
-              kind="ghost"
-              size="sm"
-              icon={showComments ? "EyeOff" : "Eye"}
-              onClick={() => setShowComments((v) => !v)}
-            >
-              {showComments ? "Hide comments" : "Show comments"} ({commentCount})
-            </Button>
-          ) : undefined
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div role="group" aria-label={t("reviewerOrderedDiff")} style={toggleStyles.group}>
+              <button
+                type="button"
+                aria-pressed={smart}
+                onClick={() => setSmart(true)}
+                style={toggleStyles.option(smart)}
+              >
+                {t("smartOrder")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={!smart}
+                onClick={() => setSmart(false)}
+                style={toggleStyles.option(!smart)}
+              >
+                {t("originalOrder")}
+              </button>
+            </div>
+            {commentCount > 0 && (
+              <Button
+                kind="ghost"
+                size="sm"
+                icon={showComments ? "EyeOff" : "Eye"}
+                onClick={() => setShowComments((v) => !v)}
+              >
+                {showComments ? "Hide comments" : "Show comments"} ({commentCount})
+              </Button>
+            )}
+          </div>
         }
       >
-        Files changed · {filesCount} files
+        {showSmart ? t("reviewerOrderedDiff") : `Files changed`} · {filesCount} files
       </SectionLabel>
-      <DiffViewer files={files} commenting={commenting} />
+      {showSmart ? (
+        <SmartDiffViewer
+          groups={smartDiff!.groups}
+          files={files}
+          splitSuggestion={smartDiff!.split_suggestion}
+          commenting={commenting}
+        />
+      ) : (
+        <DiffViewer files={files} commenting={commenting} />
+      )}
     </section>
   );
 }
+
+const toggleStyles = {
+  group: {
+    display: "inline-flex",
+    border: "1px solid var(--border)",
+    borderRadius: 7,
+    overflow: "hidden",
+  } as React.CSSProperties,
+  option: (active: boolean): React.CSSProperties => ({
+    fontSize: 12,
+    padding: "3px 10px",
+    cursor: "pointer",
+    border: "none",
+    color: active ? "var(--text-primary)" : "var(--text-muted)",
+    background: active ? "var(--bg-elevated)" : "transparent",
+    fontWeight: active ? 600 : 400,
+  }),
+};

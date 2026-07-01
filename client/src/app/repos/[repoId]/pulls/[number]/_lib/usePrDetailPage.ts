@@ -61,6 +61,8 @@ export function usePrDetailPage() {
     invalidateActiveRuns();
     invalidateRunHistory();
     refetchReviews();
+    // Smart Diff overlays the latest review's findings → refresh its badges too.
+    if (prId) qc.invalidateQueries({ queryKey: ["smart-diff", prId] });
   };
   const onDeleteRun = (id: string) => {
     if (window.confirm("Delete this run from history? (its logs are removed too)"))

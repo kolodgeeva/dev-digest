@@ -46,5 +46,24 @@
     "viewOnGitHub": "View on GitHub",
     "postedToGitHub": "Posts to GitHub immediately",
     "outdatedTitle": "{count} comment(s) on older revisions"
+  },
+  "smartDiff": {
+    "reviewerOrderedDiff": "Reviewer-ordered diff",
+    "smartOrder": "Smart order",
+    "originalOrder": "Original order",
+    "filesCount": "{count} files",
+    "findings": "{count} findings",
+    "splitBanner": "This PR is large (~{lines} lines) — consider splitting into {parts} parts.",
+    "empty": "No changed files to order.",
+    "roles": {
+      "core": "Core logic",
+      "wiring": "Wiring",
+      "boilerplate": "Boilerplate"
+    },
+    "roleHints": {
+      "core": "The substance of the change — review closely",
+      "wiring": "Hooks the core into the app",
+      "boilerplate": "Generated / mechanical — skim"
+    }
   }
 }
