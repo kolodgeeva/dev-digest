@@ -14,5 +14,13 @@
   "graph": {
     "empty": "No downstream callers to graph.",
     "ariaLabel": "Blast radius graph"
+  },
+  "degraded": "Partial index",
+  "degradedHint": "Showing best-effort results — the repo index is incomplete.",
+  "empty": {
+    "title": "No blast radius data",
+    "body": "The repo index may not be built yet.",
+    "noSymbolsTitle": "Nothing to map",
+    "noSymbolsBody": "This PR doesn't change any indexed code symbols (e.g. it only touches non-TypeScript files like .vue components or JSON)."
   }
 }

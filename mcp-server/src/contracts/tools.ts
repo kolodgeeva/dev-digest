@@ -97,17 +97,31 @@ export const getConventionsOutput = {
   ),
 };
 
-// ---- get_blast_radius (stub) ----------------------------------------------
+// ---- get_blast_radius -----------------------------------------------------
 export const getBlastRadiusInput = {
   repo: z.string().min(1).describe('Repository full name, "owner/name".'),
   pr: z.number().int().positive().describe('Pull request number.'),
 };
 export const getBlastRadiusOutput = {
-  status: z.literal('not_implemented'),
+  status: z.enum(['ok', 'degraded']),
   repo: z.string(),
   pr: z.number(),
-  message: z.string(),
-  changed_symbols: z.array(z.string()),
-  callers: z.array(z.string()),
+  summary: z.string(),
+  changed_symbols: z.array(
+    z.object({ name: z.string(), file: z.string(), kind: z.string() }),
+  ),
+  downstream: z.array(
+    z.object({
+      symbol: z.string(),
+      callers: z.array(
+        z.object({ name: z.string(), file: z.string(), line: z.number() }),
+      ),
+      endpoints_affected: z.array(z.string()),
+      crons_affected: z.array(z.string()),
+    }),
+  ),
+  /** Flat de-duplicated union of all downstream endpoints — the quick "what breaks" signal. */
   impacted_endpoints: z.array(z.string()),
+  degraded: z.boolean(),
+  reason: z.string().nullable(),
 };

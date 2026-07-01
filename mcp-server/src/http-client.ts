@@ -1,5 +1,5 @@
 import type { Agent, ConventionCandidate } from '@devdigest/shared';
-import type { ToolDeps, RunOutcome, RunSyncResult } from './deps.js';
+import type { ToolDeps, RunOutcome, RunSyncResult, BlastResponse } from './deps.js';
 import { ApiError } from './errors.js';
 
 /**
@@ -114,6 +114,14 @@ export function createHttpClient(cfg: HttpClientConfig): ToolDeps {
         READ_TIMEOUT_MS,
       )) as { conventions: ConventionCandidate[] };
       return body.conventions;
+    },
+
+    async getBlastRadius(input: { repo: string; pr: number }): Promise<BlastResponse> {
+      return (await call(
+        `/blast?repo=${encodeURIComponent(input.repo)}&pr=${input.pr}`,
+        { method: 'GET' },
+        READ_TIMEOUT_MS,
+      )) as BlastResponse;
     },
   };
 }

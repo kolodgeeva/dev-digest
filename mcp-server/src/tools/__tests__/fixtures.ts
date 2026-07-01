@@ -1,5 +1,5 @@
 import type { Agent, ConventionCandidate } from '@devdigest/shared';
-import type { ToolDeps, RunOutcome, OutcomeFinding } from '../../deps.js';
+import type { ToolDeps, RunOutcome, OutcomeFinding, BlastResponse } from '../../deps.js';
 
 /** Minimal Agent for list_agents tests (only id/name/enabled/model are projected). */
 export function agent(id: string): Agent {
@@ -51,6 +51,31 @@ export function conventionCandidate(over: Partial<ConventionCandidate> = {}): Co
   };
 }
 
+/** A blast-radius fixture with ≥2 callers and ≥1 endpoint by default. */
+export function blast(over: Partial<BlastResponse> = {}): BlastResponse {
+  return {
+    changed_symbols: [
+      { name: 'fetchUser', file: 'src/users/service.ts', kind: 'function' },
+      { name: 'UserRow', file: 'src/users/types.ts', kind: 'interface' },
+    ],
+    downstream: [
+      {
+        symbol: 'fetchUser',
+        callers: [
+          { name: 'getProfile', file: 'src/profile/handler.ts', line: 42 },
+          { name: 'listUsers', file: 'src/admin/handler.ts', line: 17 },
+        ],
+        endpoints_affected: ['GET /profile', 'GET /admin/users'],
+        crons_affected: [],
+      },
+    ],
+    summary: '2 symbols changed · 2 downstream callers across 2 files · 2 endpoints impacted',
+    degraded: false,
+    reason: null,
+    ...over,
+  };
+}
+
 /** A ToolDeps with benign defaults; override per test. */
 export function makeDeps(over: Partial<ToolDeps> = {}): ToolDeps {
   return {
@@ -58,6 +83,7 @@ export function makeDeps(over: Partial<ToolDeps> = {}): ToolDeps {
     runAgentOnPr: async () => ({ kind: 'outcome', outcome: outcome() }),
     getOutcome: async () => undefined,
     getConventions: async () => [],
+    getBlastRadius: async () => blast(),
     ...over,
   };
 }

@@ -63,6 +63,8 @@ export function usePrDetailPage() {
     refetchReviews();
     // Smart Diff overlays the latest review's findings → refresh its badges too.
     if (prId) qc.invalidateQueries({ queryKey: ["smart-diff", prId] });
+    // Blast Radius panel — invalidate so it picks up any updated repo-intel index.
+    if (prId) qc.invalidateQueries({ queryKey: ["blast", prId] });
   };
   const onDeleteRun = (id: string) => {
     if (window.confirm("Delete this run from history? (its logs are removed too)"))

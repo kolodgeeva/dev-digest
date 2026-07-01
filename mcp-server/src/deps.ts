@@ -11,6 +11,23 @@ import type { Agent, ConventionCandidate } from '@devdigest/shared';
  * `ConventionCandidate`), which are erased at runtime.
  */
 
+/**
+ * The envelope returned by `GET /blast?repo=owner/name&pr=N` — a PR's blast
+ * radius built from the repo-intel index (no LLM).
+ */
+export interface BlastResponse {
+  changed_symbols: { name: string; file: string; kind: string }[];
+  downstream: {
+    symbol: string;
+    callers: { name: string; file: string; line: number }[];
+    endpoints_affected: string[];
+    crons_affected: string[];
+  }[];
+  summary: string;
+  degraded: boolean;
+  reason: string | null;
+}
+
 /** A review finding as the API serialises it (snake_case); fed to `toMcpFinding`. */
 export interface OutcomeFinding {
   severity: string;
@@ -54,4 +71,7 @@ export interface ToolDeps {
 
   /** `GET /conventions?repo=owner/name` — the repo's vetted conventions. */
   getConventions(repo: string): Promise<ConventionCandidate[]>;
+
+  /** `GET /blast?repo=owner/name&pr=N` — a PR's blast radius from the repo-intel index. */
+  getBlastRadius(input: { repo: string; pr: number }): Promise<BlastResponse>;
 }
